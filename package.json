@@ -1,0 +1,13 @@
+{
+  "name": "rccb-inscriptions",
+  "version": "1.0.0",
+  "description": "Plateforme d'inscription RCCB Bénin",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2"
+  }
+}
