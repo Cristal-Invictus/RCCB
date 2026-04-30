@@ -28,3 +28,5 @@ Dès que tu m'envoies la liste officielle des vicariats + paroisses, je l'intèg
 ## GitHub
 Voir aussi `GITHUB_DEPLOY.md` pour la publication GitHub et le déploiement public.
 
+## Supabase + Render
+Voir `SUPABASE_SETUP.md` pour la configuration pas à pas.
