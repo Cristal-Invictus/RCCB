@@ -5,16 +5,6 @@ const Database = require('better-sqlite3');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-function isSupabaseConfigUsable() {
-  const url = (process.env.SUPABASE_URL || '').trim();
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-  if (!url || !key) return false;
-  if (url.includes('<project-ref>')) return false;
-  try { new URL(url); } catch { return false; }
-  return true;
-}
-
-const useSupabase = isSupabaseConfigUsable();
 const useSupabase = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 let db;
@@ -87,11 +77,6 @@ async function supabaseRequest(endpoint, options = {}) {
 }
 
 app.get('/api/health', (_req, res) => {
-  const configuredUrl = (process.env.SUPABASE_URL || '').trim();
-  const supabaseConfigError = configuredUrl && !useSupabase
-    ? 'SUPABASE_URL invalide (souvent laissé à https://<project-ref>.supabase.co)'
-    : null;
-  res.json({ ok: true, storage: useSupabase ? 'supabase' : 'sqlite', supabaseConfigError });
   res.json({ ok: true, storage: useSupabase ? 'supabase' : 'sqlite' });
 });
 
