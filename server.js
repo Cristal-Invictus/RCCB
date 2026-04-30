@@ -1,10 +1,12 @@
 const path = require('path');
 const express = require('express');
+const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin123';
+const ADMIN_SESSION = process.env.ADMIN_SESSION || crypto.createHash('sha256').update(ADMIN_TOKEN).digest('hex');
 const useSupabase = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 let db;
@@ -47,52 +49,27 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-
-function asText(value) {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return '';
-}
-
-function computeAgeFromDate(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return null;
-  const now = new Date();
-  let age = now.getFullYear() - d.getFullYear();
-  const m = now.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
-  return age >= 0 ? age : null;
-}
-
+function asText(v) { if (v === null || v === undefined) return ''; return typeof v === 'string' ? v.trim() : String(v); }
+function computeAgeFromDate(dateStr) { const d = new Date(dateStr); if (Number.isNaN(d.getTime())) return null; const now = new Date(); let age = now.getFullYear() - d.getFullYear(); const m = now.getMonth() - d.getMonth(); if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--; return age >= 0 ? age : null; }
+function getCookie(req, name) { const raw = req.headers.cookie || ''; const pairs = raw.split(';').map((x) => x.trim().split('=')); const f = pairs.find(([k]) => k === name); return f ? decodeURIComponent(f[1] || '') : ''; }
+function requireAdmin(req, res, next) { return getCookie(req, 'rccb_admin') === ADMIN_SESSION ? next() : res.status(401).json({ error: 'Non autorisé' }); }
 
 async function supabaseRequest(endpoint, options = {}) {
   const base = process.env.SUPABASE_URL.replace(/\/$/, '');
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const res = await fetch(`${base}/rest/v1/${endpoint}`, {
-    ...options,
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-      ...(options.headers || {})
-    }
-  });
-
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Supabase error ${res.status}: ${txt}`);
-  }
-
+  const res = await fetch(`${base}/rest/v1/${endpoint}`, { ...options, headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(options.headers || {}) } });
+  if (!res.ok) throw new Error(`Supabase error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return null;
   return res.json();
 }
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, storage: useSupabase ? 'supabase' : 'sqlite' });
+app.get('/api/health', (_req, res) => res.json({ ok: true, storage: useSupabase ? 'supabase' : 'sqlite' }));
+app.post('/api/admin/login', (req, res) => {
+  if (asText(req.body?.password) !== ADMIN_TOKEN) return res.status(401).json({ error: 'Mot de passe invalide' });
+  res.setHeader('Set-Cookie', `rccb_admin=${encodeURIComponent(ADMIN_SESSION)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+  return res.json({ ok: true });
 });
+app.post('/api/admin/logout', (_req, res) => { res.setHeader('Set-Cookie', 'rccb_admin=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'); return res.json({ ok: true }); });
 
 app.get('/api/inscriptions', async (req, res) => {
   try {
@@ -160,15 +137,11 @@ app.post('/api/inscriptions', async (req, res) => {
 
     const info = stmt.run(payload);
     return res.status(201).json({ id: info.lastInsertRowid, ...payload });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+  } catch (error) { return res.status(500).json({ error: error.message }); }
 });
 
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.get('/admin/login', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'admin-login.html')));
+app.get('/admin', (req, res) => (getCookie(req, 'rccb_admin') === ADMIN_SESSION ? res.sendFile(path.join(__dirname, 'public', 'admin.html')) : res.redirect('/admin/login')));
+app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-app.listen(PORT, () => {
-  console.log(`RCCB app running on http://localhost:${PORT} (${useSupabase ? 'supabase' : 'sqlite'})`);
-});
+app.listen(PORT, () => console.log(`RCCB app running on http://localhost:${PORT} (${useSupabase ? 'supabase' : 'sqlite'})`));
