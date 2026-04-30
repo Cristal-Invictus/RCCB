@@ -15,6 +15,7 @@ function isSupabaseConfigUsable() {
 }
 
 const useSupabase = isSupabaseConfigUsable();
+const useSupabase = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 let db;
 if (!useSupabase) {
@@ -91,6 +92,7 @@ app.get('/api/health', (_req, res) => {
     ? 'SUPABASE_URL invalide (souvent laissé à https://<project-ref>.supabase.co)'
     : null;
   res.json({ ok: true, storage: useSupabase ? 'supabase' : 'sqlite', supabaseConfigError });
+  res.json({ ok: true, storage: useSupabase ? 'supabase' : 'sqlite' });
 });
 
 app.get('/api/inscriptions', async (_req, res) => {
