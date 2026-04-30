@@ -1,6 +1,6 @@
 // Frontend <-> Backend connector for RCCB registration
 // - Sends JSON to POST /api/inscriptions
-// - Handles optional photo as base64 data URL
+// - Sends the required photo as base64 data URL
 
 const VICARIATS_PAROISSES = {
   "Vicariat Forain Notre-Dame Cotonou": [
@@ -283,6 +283,7 @@ async function buildPayloadFromForm(form) {
     throw new Error('Date de présence invalide (format attendu: YYYY-MM-DD).');
   }
   if (!sexe) throw new Error('Veuillez sélectionner le sexe.');
+  if (!situation_relationnelle) throw new Error('Veuillez sélectionner la situation relationnelle.');
   if (!vicariat) throw new Error('Veuillez sélectionner le vicariat.');
   if (!paroisse) throw new Error('Veuillez renseigner la paroisse.');
 
@@ -295,9 +296,13 @@ async function buildPayloadFromForm(form) {
 
   let photo = '';
   const file = fd.get('photo');
-  if (file && file instanceof File && file.size > 0) {
-    photo = await fileToDataUrl(file);
+  if (!file || !(file instanceof File) || file.size <= 0) {
+    throw new Error('Veuillez ajouter une photo.');
   }
+  if (file.size > 2 * 1024 * 1024) {
+    throw new Error('Photo trop lourde (max 2Mo).');
+  }
+  photo = await fileToDataUrl(file);
 
   return {
     nom,

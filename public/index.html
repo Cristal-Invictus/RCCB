@@ -149,8 +149,8 @@
                 <span class="material-symbols-outlined text-outline text-5xl mb-2">add_a_photo</span>
                 <span class="text-xs font-semibold text-outline-variant uppercase tracking-widest">Photo (Upload)</span>
               </div>
-              <p class="mt-3 text-xs text-center text-on-surface-variant">Format JPG ou PNG max 2Mo</p>
-              <input class="hidden" type="file" id="photo" name="photo" accept="image/jpeg, image/png" />
+              <p class="mt-3 text-xs text-center text-on-surface-variant">Photo obligatoire - JPG ou PNG max 2Mo</p>
+              <input class="hidden" type="file" id="photo" name="photo" accept="image/jpeg, image/png" required />
             </div>
           </div>
 
@@ -181,12 +181,13 @@
             </div>
             <div class="flex flex-col gap-2">
               <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="relationship-status">Situation relationnelle</label>
-              <select class="input-spirit p-3 rounded-t-lg appearance-none" id="relationship-status" name="situation_relationnelle">
+              <select class="input-spirit p-3 rounded-t-lg appearance-none" id="relationship-status" name="situation_relationnelle" required>
                 <option value="">Sélectionner</option>
-                <option value="celibataire">Célibataire</option>
+                <option value="libre_de_toute_relation">Libre de toute relation</option>
+                <option value="engage">Engagé(e)</option>
+                <option value="en_couple">En couple</option>
+                <option value="fiance">Fiancé(e)</option>
                 <option value="marie">Marié(e)</option>
-                <option value="religieux">Religieux / Religieuse</option>
-                <option value="autre">Autre</option>
               </select>
             </div>
             <div class="flex flex-col gap-2">

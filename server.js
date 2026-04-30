@@ -227,7 +227,7 @@ app.get('/api/inscriptions.csv', requireAdmin, async (_req, res) => {
 app.post('/api/inscriptions', async (req, res) => {
   try {
     const data = req.body || {};
-  const required = ['nom', 'prenom', 'date_naissance', 'sexe', 'vicariat', 'paroisse', 'presence_date'];
+  const required = ['nom', 'prenom', 'date_naissance', 'sexe', 'situation_relationnelle', 'photo', 'vicariat', 'paroisse', 'presence_date'];
     const missing = required.filter((k) => !data[k]);
 
     if (missing.length) {
@@ -260,7 +260,6 @@ app.post('/api/inscriptions', async (req, res) => {
 
     let photo = data.photo || '';
     if (photo && typeof photo === 'string') {
-      // Optionnel: vérifier que c'est bien un data URL base64 image
       const isDataUrl = photo.startsWith('data:image/');
       if (!isDataUrl) {
         return res.status(400).json({ error: 'Photo invalide (format)'});
@@ -270,7 +269,7 @@ app.post('/api/inscriptions', async (req, res) => {
         return res.status(400).json({ error: 'Photo trop lourde' });
       }
     } else {
-      photo = '';
+      return res.status(400).json({ error: 'Photo obligatoire' });
     }
 
     const payload = {
