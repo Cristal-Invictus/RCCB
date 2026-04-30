@@ -71,8 +71,9 @@ function showDetails(x) {
 
 function render(list) {
   const total = list.length;
-  const men = list.filter((x) => x.sexe === 'Masculin').length;
-  const women = list.filter((x) => x.sexe === 'Féminin').length;
+  const normSex = (v) => String(v || '').toLowerCase();
+  const men = list.filter((x) => ['masculin', 'homme', 'm'].includes(normSex(x.sexe))).length;
+  const women = list.filter((x) => ['féminin', 'feminin', 'femme', 'f'].includes(normSex(x.sexe))).length;
 
   stats.innerHTML = `<div class="stat"><b>${total}</b><br>Total</div><div class="stat"><b>${men}</b><br>Hommes</div><div class="stat"><b>${women}</b><br>Femmes</div>`;
   rows.innerHTML = list
