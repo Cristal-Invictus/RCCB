@@ -198,6 +198,11 @@ form.addEventListener('submit', async (e) => {
   const fd = new FormData(form);
   const data = Object.fromEntries(fd.entries());
 
+  // Champs supprimés (compat)
+  delete data.age;
+  delete data.email;
+  delete data.statut_marital;
+
   // Photo (optionnel) -> base64 data URL
   const file = fd.get('photo');
   if (file && file instanceof File && file.size > 0) {
@@ -232,7 +237,7 @@ form.addEventListener('submit', async (e) => {
       return;
     }
 
-    flash.textContent = 'Inscription enregistrée.';
+  flash.textContent = 'Présence enregistrée.';
     flash.style.color = 'green';
     form.reset();
     populateParoisses('');

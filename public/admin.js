@@ -4,6 +4,8 @@ const searchInput = document.getElementById('search');
 const adminHint = document.getElementById('adminHint');
 const logoutBtn = document.getElementById('logoutBtn');
 const details = document.getElementById('details');
+const presenceDateInput = document.getElementById('presenceDate');
+const downloadCsv = document.getElementById('downloadCsv');
 
 let inscriptions = [];
 
@@ -29,23 +31,23 @@ function showDetails(x) {
     <div class="detailsHead">
       <div>
         <strong>${escapeHtml(x.nom)} ${escapeHtml(x.prenom)}</strong>
-        <div class="hint">Inscrit le ${escapeHtml(new Date(x.created_at).toLocaleString())}</div>
+  <div class="hint">Enregistré le ${escapeHtml(new Date(x.created_at).toLocaleString())}</div>
       </div>
       <button id="closeDetails" class="btnSmall" type="button">Fermer</button>
     </div>
     <div class="detailsGrid">
       <div class="detailsCard">${photo}</div>
       <div class="detailsCard">
-        <div><span class="k">Âge</span><span class="v">${escapeHtml(x.age)}</span></div>
+  <div><span class="k">Date de présence</span><span class="v">${escapeHtml(x.presence_date || '')}</span></div>
+  <div><span class="k">Date de naissance</span><span class="v">${escapeHtml(x.date_naissance || '')}</span></div>
         <div><span class="k">Sexe</span><span class="v">${escapeHtml(x.sexe)}</span></div>
-        <div><span class="k">Statut marital</span><span class="v">${escapeHtml(x.statut_marital || '')}</span></div>
+  <div><span class="k">Situation relationnelle</span><span class="v">${escapeHtml(x.situation_relationnelle || '')}</span></div>
         <div><span class="k">Profession</span><span class="v">${escapeHtml(x.profession || '')}</span></div>
       </div>
       <div class="detailsCard">
         <div><span class="k">Vicariat</span><span class="v">${escapeHtml(x.vicariat)}</span></div>
         <div><span class="k">Paroisse</span><span class="v">${escapeHtml(x.paroisse)}</span></div>
         <div><span class="k">Téléphone</span><span class="v">${escapeHtml(x.telephone || '')}</span></div>
-        <div><span class="k">Email</span><span class="v">${escapeHtml(x.email || '')}</span></div>
       </div>
       <div class="detailsCard" style="grid-column:1/-1;">
         <div><span class="k">Commentaires</span><span class="v">${escapeHtml(x.commentaires || '')}</span></div>
@@ -59,24 +61,23 @@ function showDetails(x) {
 
 function render(list) {
   const total = list.length;
-  const avgAge = total ? Math.round(list.reduce((a, x) => a + Number(x.age || 0), 0) / total) : 0;
   const men = list.filter((x) => x.sexe === 'Masculin').length;
   const women = list.filter((x) => x.sexe === 'Féminin').length;
 
-  stats.innerHTML = `<div class="stat"><b>${total}</b><br>Total</div><div class="stat"><b>${avgAge}</b><br>Âge moyen</div><div class="stat"><b>${men}</b><br>Hommes</div><div class="stat"><b>${women}</b><br>Femmes</div>`;
+  stats.innerHTML = `<div class="stat"><b>${total}</b><br>Total</div><div class="stat"><b>${men}</b><br>Hommes</div><div class="stat"><b>${women}</b><br>Femmes</div>`;
   rows.innerHTML = list
     .map(
       (x) =>
         `<tr class="clickRow" data-id="${x.id}">
-          <td>${escapeHtml(new Date(x.created_at).toLocaleString())}</td>
+          <td>${escapeHtml(x.presence_date || '')}</td>
           <td><strong>${escapeHtml(x.nom)} ${escapeHtml(x.prenom)}</strong></td>
-          <td>${escapeHtml(x.age)}</td>
+          <td>${escapeHtml(x.date_naissance || '')}</td>
           <td>${escapeHtml(x.sexe)}</td>
-          <td>${escapeHtml(x.statut_marital || '')}</td>
+          <td>${escapeHtml(x.situation_relationnelle || '')}</td>
           <td>${escapeHtml(x.profession || '')}</td>
           <td>${escapeHtml(x.vicariat)}</td>
           <td>${escapeHtml(x.paroisse)}</td>
-          <td>${escapeHtml(x.telephone || '')}${x.email ? '<br>' + escapeHtml(x.email) : ''}</td>
+          <td>${escapeHtml(x.telephone || '')}</td>
           <td>${x.photo ? '<span class="pill">Voir</span>' : ''}</td>
         </tr>`
     )
@@ -95,7 +96,7 @@ function render(list) {
 function applySearch() {
   const q = (searchInput.value || '').trim().toLowerCase();
   const filtered = inscriptions.filter((x) =>
-  [x.nom, x.prenom, x.vicariat, x.paroisse, x.profession, x.telephone, x.email, x.statut_marital]
+  [x.presence_date, x.nom, x.prenom, x.vicariat, x.paroisse, x.profession, x.telephone, x.situation_relationnelle]
       .join(' ')
       .toLowerCase()
       .includes(q)
@@ -105,7 +106,9 @@ function applySearch() {
 
 async function fetchInscriptions() {
   try {
-    const r = await fetch('/api/inscriptions');
+  const d = (presenceDateInput?.value || '').trim();
+  const url = d ? `/api/inscriptions?date=${encodeURIComponent(d)}` : '/api/inscriptions';
+  const r = await fetch(url);
     if (r.status === 401) {
       location.href = '/admin/login';
       return;
@@ -116,6 +119,11 @@ async function fetchInscriptions() {
     }
     inscriptions = await r.json();
     applySearch();
+
+    // Met à jour le lien CSV pour inclure le filtre date
+    if (downloadCsv) {
+      downloadCsv.href = d ? `/api/inscriptions.csv?date=${encodeURIComponent(d)}` : '/api/inscriptions.csv';
+    }
   } catch (err) {
     stats.innerHTML = '<div class="stat" style="grid-column:1/-1; border-color:#fecaca; background:#fff1f2;">Impossible de charger les inscriptions.</div>';
     rows.innerHTML = '';
@@ -127,6 +135,11 @@ async function fetchInscriptions() {
 }
 
 searchInput.addEventListener('input', applySearch);
+
+presenceDateInput?.addEventListener('change', () => {
+  showDetails(null);
+  fetchInscriptions();
+});
 
 logoutBtn?.addEventListener('click', async () => {
   try {

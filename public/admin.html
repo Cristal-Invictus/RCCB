@@ -8,14 +8,18 @@
 </head>
 <body>
   <header>
-    <h1>RCCB Admin</h1>
-    <p>Dashboard des inscriptions</p>
+  <h1>Admin – Liste de présence</h1>
+  <p>Dashboard des présences (filtrable par date)</p>
   </header>
 
   <main class="grid" style="grid-template-columns:1fr;">
     <section class="card">
       <div class="toolbar">
         <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+          <label class="hint" style="display:flex; align-items:center; gap:.5rem;">
+            Date:
+            <input id="presenceDate" type="date" />
+          </label>
           <a id="downloadCsv" class="btnLink" href="/api/inscriptions.csv" download>⬇ Télécharger (CSV)</a>
           <button id="logoutBtn" class="btnLink" type="button" style="background:#334155;">Déconnexion</button>
         </div>
@@ -33,13 +37,13 @@
             <tr>
               <th>Date</th>
               <th>Nom</th>
-              <th>Âge</th>
+              <th>Date de naissance</th>
               <th>Sexe</th>
-              <th>Statut</th>
+              <th>Situation</th>
               <th>Profession</th>
               <th>Vicariat</th>
               <th>Paroisse</th>
-              <th>Contact</th>
+              <th>Téléphone</th>
               <th>Photo</th>
             </tr>
           </thead>

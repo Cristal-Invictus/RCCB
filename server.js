@@ -1,19 +1,34 @@
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config();
 const express = require('express');
-const sqlite3 = require('sqlite3');
-const { open } = require('sqlite');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+// DB (Supabase Postgres)
+// On attend une variable DATABASE_URL (Supabase fournit ce format).
+// Exemple: postgres://USER:PASSWORD@HOST:5432/postgres
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error('Missing DATABASE_URL. Configure it (e.g. Supabase Postgres connection string).');
 }
 
-const dbFile = path.join(dataDir, 'rccb.db');
-let db;
+function shouldUseSsl(databaseUrl) {
+  const env = (process.env.PGSSL || '').toLowerCase();
+  // PGSSL=disable pour forcer sans SSL (utile en local)
+  if (env === 'disable' || env === 'false' || env === '0') return false;
+  // PGSSL=require pour forcer SSL
+  if (env === 'require' || env === 'true' || env === '1') return true;
+  // Par défaut: SSL uniquement pour Supabase (évite de casser un Postgres local)
+  return /supabase\.com/i.test(databaseUrl || '');
+}
+
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: shouldUseSsl(DATABASE_URL) ? { rejectUnauthorized: false } : false
+});
 
 app.use(express.json({ limit: '6mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -95,7 +110,13 @@ app.post('/api/admin/logout', (_req, res) => {
 // Lecture = admin (dashboard). Écriture = public (formulaire)
 app.get('/api/inscriptions', requireAdmin, async (_req, res) => {
   try {
-    const rows = await db.all('SELECT * FROM inscriptions ORDER BY id DESC');
+    const presenceDate = (_req.query && String(_req.query.date || '').trim()) || '';
+    const q = presenceDate
+      ? 'SELECT * FROM inscriptions WHERE presence_date = $1 ORDER BY id DESC'
+      : 'SELECT * FROM inscriptions ORDER BY id DESC';
+
+    const params = presenceDate ? [presenceDate] : [];
+    const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur', details: String(err && err.message ? err.message : err) });
@@ -105,18 +126,25 @@ app.get('/api/inscriptions', requireAdmin, async (_req, res) => {
 // Export CSV (admin)
 app.get('/api/inscriptions.csv', requireAdmin, async (_req, res) => {
   try {
-    const rows = await db.all('SELECT * FROM inscriptions ORDER BY id DESC');
+    const presenceDate = (_req.query && String(_req.query.date || '').trim()) || '';
+    const q = presenceDate
+      ? 'SELECT * FROM inscriptions WHERE presence_date = $1 ORDER BY id DESC'
+      : 'SELECT * FROM inscriptions ORDER BY id DESC';
+    const params = presenceDate ? [presenceDate] : [];
+
+    const result = await pool.query(q, params);
+    const rows = result.rows;
     const headers = [
       'id',
+      'presence_date',
       'created_at',
       'nom',
       'prenom',
-      'age',
+      'date_naissance',
       'sexe',
-  'statut_marital',
+      'situation_relationnelle',
       'profession',
       'telephone',
-      'email',
       'photo',
       'vicariat',
       'paroisse',
@@ -139,16 +167,21 @@ app.get('/api/inscriptions.csv', requireAdmin, async (_req, res) => {
 app.post('/api/inscriptions', async (req, res) => {
   try {
     const data = req.body || {};
-    const required = ['nom', 'prenom', 'age', 'sexe', 'vicariat', 'paroisse'];
+  const required = ['nom', 'prenom', 'date_naissance', 'sexe', 'vicariat', 'paroisse', 'presence_date'];
     const missing = required.filter((k) => !data[k]);
 
     if (missing.length) {
       return res.status(400).json({ error: `Champs obligatoires manquants: ${missing.join(', ')}` });
     }
 
-    const age = Number(data.age);
-    if (!Number.isFinite(age) || age < 1 || age > 120) {
-      return res.status(400).json({ error: 'Âge invalide' });
+    const dn = String(data.date_naissance || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dn)) {
+      return res.status(400).json({ error: 'Date de naissance invalide (format attendu: YYYY-MM-DD)' });
+    }
+
+    const presenceDate = String(data.presence_date || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(presenceDate)) {
+      return res.status(400).json({ error: 'Date de présence invalide (format attendu: YYYY-MM-DD)' });
     }
 
     let photo = data.photo || '';
@@ -169,38 +202,44 @@ app.post('/api/inscriptions', async (req, res) => {
     const payload = {
       nom: String(data.nom).trim(),
       prenom: String(data.prenom).trim(),
-      age,
+  date_naissance: dn,
       sexe: String(data.sexe),
-  statut_marital: data.statut_marital ? String(data.statut_marital) : '',
+  situation_relationnelle: data.situation_relationnelle ? String(data.situation_relationnelle) : '',
       profession: data.profession || '',
       telephone: data.telephone || '',
-      email: data.email || '',
       photo,
       vicariat: String(data.vicariat),
       paroisse: String(data.paroisse),
       commentaires: data.commentaires || '',
+  presence_date: presenceDate,
       created_at: new Date().toISOString()
     };
 
-    const result = await db.run(
-  `INSERT INTO inscriptions (nom, prenom, age, sexe, statut_marital, profession, telephone, email, photo, vicariat, paroisse, commentaires, created_at)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+    const q = `
+      INSERT INTO inscriptions
+  (nom, prenom, date_naissance, sexe, situation_relationnelle, profession, telephone, photo, vicariat, paroisse, commentaires, presence_date, created_at)
+      VALUES
+  ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+      RETURNING id;
+    `;
+
+    const r = await pool.query(q, [
       payload.nom,
       payload.prenom,
-      payload.age,
+  payload.date_naissance,
       payload.sexe,
-  payload.statut_marital,
+  payload.situation_relationnelle,
       payload.profession,
       payload.telephone,
-      payload.email,
       payload.photo,
       payload.vicariat,
       payload.paroisse,
       payload.commentaires,
-      payload.created_at
-    );
+  payload.presence_date,
+  payload.created_at
+    ]);
 
-    res.status(201).json({ id: result.lastID, ...payload });
+    res.status(201).json({ id: r.rows?.[0]?.id, ...payload });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur', details: String(err && err.message ? err.message : err) });
   }
@@ -211,32 +250,25 @@ app.get('*', (_req, res) => {
 });
 
 async function start() {
-  db = await open({ filename: dbFile, driver: sqlite3.Database });
-  await db.exec(`
+  // Create tables if needed
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS inscriptions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id BIGSERIAL PRIMARY KEY,
       nom TEXT NOT NULL,
       prenom TEXT NOT NULL,
-      age INTEGER NOT NULL,
+  date_naissance DATE NOT NULL,
       sexe TEXT NOT NULL,
-      statut_marital TEXT,
+  situation_relationnelle TEXT,
       profession TEXT,
       telephone TEXT,
-      email TEXT,
       photo TEXT,
       vicariat TEXT NOT NULL,
       paroisse TEXT NOT NULL,
       commentaires TEXT,
-      created_at TEXT NOT NULL
+  presence_date DATE NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
     );
   `);
-
-  // Migration légère: ajouter la colonne si la table existait déjà
-  const columns = await db.all(`PRAGMA table_info(inscriptions)`);
-  const hasStatut = columns.some((c) => c && c.name === 'statut_marital');
-  if (!hasStatut) {
-    await db.exec(`ALTER TABLE inscriptions ADD COLUMN statut_marital TEXT`);
-  }
 
   app.listen(PORT, () => {
     console.log(`RCCB app running on http://localhost:${PORT}`);
