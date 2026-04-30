@@ -9,6 +9,16 @@ const downloadCsv = document.getElementById('downloadCsv');
 
 let inscriptions = [];
 
+function asYmd(value) {
+  if (!value) return '';
+  // Supabase/pg peut renvoyer DATE comme string 'YYYY-MM-DD' ou en ISO.
+  const s = String(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toISOString().slice(0, 10);
+}
+
 function escapeHtml(s) {
   return String(s ?? '')
     .replace(/&/g, '&amp;')
@@ -38,8 +48,8 @@ function showDetails(x) {
     <div class="detailsGrid">
       <div class="detailsCard">${photo}</div>
       <div class="detailsCard">
-  <div><span class="k">Date de présence</span><span class="v">${escapeHtml(x.presence_date || '')}</span></div>
-  <div><span class="k">Date de naissance</span><span class="v">${escapeHtml(x.date_naissance || '')}</span></div>
+  <div><span class="k">Date de présence</span><span class="v">${escapeHtml(asYmd(x.presence_date || ''))}</span></div>
+  <div><span class="k">Date de naissance</span><span class="v">${escapeHtml(asYmd(x.date_naissance || ''))}</span></div>
         <div><span class="k">Sexe</span><span class="v">${escapeHtml(x.sexe)}</span></div>
   <div><span class="k">Situation relationnelle</span><span class="v">${escapeHtml(x.situation_relationnelle || '')}</span></div>
         <div><span class="k">Profession</span><span class="v">${escapeHtml(x.profession || '')}</span></div>
@@ -69,9 +79,9 @@ function render(list) {
     .map(
       (x) =>
         `<tr class="clickRow" data-id="${x.id}">
-          <td>${escapeHtml(x.presence_date || '')}</td>
+          <td>${escapeHtml(asYmd(x.presence_date || ''))}</td>
           <td><strong>${escapeHtml(x.nom)} ${escapeHtml(x.prenom)}</strong></td>
-          <td>${escapeHtml(x.date_naissance || '')}</td>
+          <td>${escapeHtml(asYmd(x.date_naissance || ''))}</td>
           <td>${escapeHtml(x.sexe)}</td>
           <td>${escapeHtml(x.situation_relationnelle || '')}</td>
           <td>${escapeHtml(x.profession || '')}</td>

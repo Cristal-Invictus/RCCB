@@ -167,6 +167,19 @@ const vicariatSelect = document.getElementById('vicariat');
 const paroisseSelect = document.getElementById('paroisse');
 const flash = document.getElementById('flash');
 
+function todayYmd() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function normalizeSpaces(s) {
+  return String(s || '').replace(/\s+/g, ' ').trim();
+}
+
+// Lettres (avec accents), espaces, apostrophe et tiret.
+const NAME_RE = /^[A-Za-zÀ-ÖØ-öø-ÿ'\- ]+$/;
+// Bénin: 01 + 8 chiffres => 10 chiffres au total.
+const BJ_PHONE_RE = /^01\d{8}$/;
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -202,6 +215,30 @@ form.addEventListener('submit', async (e) => {
   delete data.age;
   delete data.email;
   delete data.statut_marital;
+
+  // Normalisation / validations
+  data.nom = normalizeSpaces(data.nom);
+  data.prenom = normalizeSpaces(data.prenom);
+
+  if (!data.nom || !NAME_RE.test(data.nom)) {
+    flash.textContent = "Nom invalide (lettres uniquement, espaces, '-' et apostrophe autorisés).";
+    flash.style.color = 'crimson';
+    return;
+  }
+  if (!data.prenom || !NAME_RE.test(data.prenom)) {
+    flash.textContent = "Prénom invalide (lettres uniquement, espaces, '-' et apostrophe autorisés).";
+    flash.style.color = 'crimson';
+    return;
+  }
+
+  if (data.telephone) {
+    data.telephone = String(data.telephone).replace(/\s+/g, '');
+    if (!BJ_PHONE_RE.test(data.telephone)) {
+      flash.textContent = 'Téléphone invalide (format attendu: 01XXXXXXXX).';
+      flash.style.color = 'crimson';
+      return;
+    }
+  }
 
   // Photo (optionnel) -> base64 data URL
   const file = fd.get('photo');
@@ -251,3 +288,9 @@ vicariatSelect.addEventListener('change', (e) => populateParoisses(e.target.valu
 
 initVicariats();
 populateParoisses('');
+
+// Date de présence = aujourd'hui par défaut
+const presenceDateInput = form?.querySelector('input[name="presence_date"]');
+if (presenceDateInput && !presenceDateInput.value) {
+  presenceDateInput.value = todayYmd();
+}

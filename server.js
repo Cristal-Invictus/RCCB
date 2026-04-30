@@ -68,6 +68,15 @@ function escapeCsv(value) {
   return s;
 }
 
+function normalizeSpaces(s) {
+  return String(s || '').replace(/\s+/g, ' ').trim();
+}
+
+// Lettres (avec accents), espaces, apostrophe et tiret.
+const NAME_RE = /^[A-Za-zÀ-ÖØ-öø-ÿ'\- ]+$/;
+// Bénin: 01 + 8 chiffres => 10 chiffres au total.
+const BJ_PHONE_RE = /^01\d{8}$/;
+
 // Pages admin (protégées)
 app.get('/admin', requireAdmin, (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
@@ -174,7 +183,7 @@ app.post('/api/inscriptions', async (req, res) => {
       return res.status(400).json({ error: `Champs obligatoires manquants: ${missing.join(', ')}` });
     }
 
-    const dn = String(data.date_naissance || '').trim();
+  const dn = String(data.date_naissance || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dn)) {
       return res.status(400).json({ error: 'Date de naissance invalide (format attendu: YYYY-MM-DD)' });
     }
@@ -182,6 +191,20 @@ app.post('/api/inscriptions', async (req, res) => {
     const presenceDate = String(data.presence_date || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(presenceDate)) {
       return res.status(400).json({ error: 'Date de présence invalide (format attendu: YYYY-MM-DD)' });
+    }
+
+    const nom = normalizeSpaces(data.nom);
+    const prenom = normalizeSpaces(data.prenom);
+    if (!nom || !NAME_RE.test(nom)) {
+      return res.status(400).json({ error: "Nom invalide (lettres uniquement, espaces, '-' et apostrophe autorisés)." });
+    }
+    if (!prenom || !NAME_RE.test(prenom)) {
+      return res.status(400).json({ error: "Prénom invalide (lettres uniquement, espaces, '-' et apostrophe autorisés)." });
+    }
+
+    const telephone = data.telephone ? String(data.telephone).replace(/\s+/g, '') : '';
+    if (telephone && !BJ_PHONE_RE.test(telephone)) {
+      return res.status(400).json({ error: 'Téléphone invalide (format attendu: 01XXXXXXXX).' });
     }
 
     let photo = data.photo || '';
@@ -200,19 +223,19 @@ app.post('/api/inscriptions', async (req, res) => {
     }
 
     const payload = {
-      nom: String(data.nom).trim(),
-      prenom: String(data.prenom).trim(),
+  nom,
+  prenom,
   date_naissance: dn,
       sexe: String(data.sexe),
   situation_relationnelle: data.situation_relationnelle ? String(data.situation_relationnelle) : '',
       profession: data.profession || '',
-      telephone: data.telephone || '',
+  telephone,
       photo,
       vicariat: String(data.vicariat),
       paroisse: String(data.paroisse),
       commentaires: data.commentaires || '',
   presence_date: presenceDate,
-      created_at: new Date().toISOString()
+  created_at: new Date().toISOString()
     };
 
     const q = `
