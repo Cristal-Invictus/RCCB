@@ -3,30 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Liste de présence - RCCB</title>
+  <title>RCCB - Inscriptions</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <header>
-    <h1>Plateforme d’enregistrement des participants (Liste de présence)</h1>
-    <p>Choisissez une date, puis enregistrez les participants présents. Les responsables pourront consulter et exporter la liste via l’espace admin.</p>
-  <p><a href="/admin/login" style="color:#e0f2fe; text-decoration:underline;">Accès admin</a></p>
+    <h1>Inscriptions RCCB Bénin</h1>
+    <p>Plateforme partagée (déployable) pour les inscriptions</p>
   </header>
 
-  <main class="grid" style="grid-template-columns:1fr; max-width:980px; margin:0 auto;">
+  <main class="grid">
     <section class="card">
-      <h2>Enregistrer une présence</h2>
+      <h2>Nouvelle inscription</h2>
       <form id="inscriptionForm">
-        <div class="row">
-          <label>Date de présence<input type="date" name="presence_date" required /></label>
-          <label>&nbsp;<input disabled style="visibility:hidden" /></label>
-        </div>
         <div class="row">
           <label>Nom<input name="nom" required /></label>
           <label>Prénom<input name="prenom" required /></label>
         </div>
         <div class="row">
-          <label>Date de naissance<input type="date" name="date_naissance" required /></label>
+          <label>Âge<input type="number" name="age" min="1" max="120" required /></label>
           <label>Sexe
             <select name="sexe" required>
               <option value="">Choisir</option>
@@ -40,36 +35,31 @@
           <label>Téléphone<input name="telephone" /></label>
         </div>
         <div class="row">
-          <label>Photo
-            <input type="file" name="photo" accept="image/*" />
-          </label>
-          <label>&nbsp;<input disabled style="visibility:hidden" /></label>
-        </div>
-        <div class="row">
-          <label>Situation relationnelle
-            <select name="situation_relationnelle">
-              <option value="">Choisir</option>
-              <option value="Célibataire">Célibataire</option>
-              <option value="Libre">Libre</option>
-              <option value="Engagé(e)">Engagé(e)</option>
-              <option value="En couple">En couple</option>
-              <option value="Marié(e)">Marié(e)</option>
-              <option value="Divorcé(e)">Divorcé(e)</option>
-              <option value="Veuf/Veuve">Veuf/Veuve</option>
-            </select>
-          </label>
-          <label>&nbsp;
-            <input disabled style="visibility:hidden" />
-          </label>
+          <label>Email<input type="email" name="email" /></label>
+          <label>Photo (URL)<input name="photo" /></label>
         </div>
         <div class="row">
           <label>Vicariat<select name="vicariat" id="vicariat" required></select></label>
           <label>Paroisse<select name="paroisse" id="paroisse" required></select></label>
         </div>
         <label>Commentaires<textarea name="commentaires" rows="3"></textarea></label>
-  <button type="submit">Enregistrer</button>
+        <button type="submit">Enregistrer</button>
       </form>
       <p id="flash"></p>
+    </section>
+
+    <section class="card">
+      <h2>Dashboard</h2>
+      <div class="stats" id="stats"></div>
+      <input id="search" placeholder="Recherche..." />
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Nom</th><th>Âge</th><th>Sexe</th><th>Vicariat</th><th>Paroisse</th><th>Contact</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
