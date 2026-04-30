@@ -9,8 +9,14 @@ const details = document.getElementById('details');
 const presenceDateInput = document.getElementById('presenceDate');
 const downloadCsv = document.getElementById('downloadCsv');
 const tableSummary = document.getElementById('tableSummary');
+const savePresenceBtn = document.getElementById('savePresenceBtn');
+const savePresenceStatus = document.getElementById('savePresenceStatus');
+const presenceSavesRows = document.getElementById('presenceSavesRows');
+const presenceSavesEmpty = document.getElementById('presenceSavesEmpty');
 
 let inscriptions = [];
+let presenceSaves = [];
+let savePresenceStatusTimer = null;
 
 function asYmd(value) {
   if (!value) return '';
@@ -29,6 +35,117 @@ function escapeHtml(s) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function formatYmdFr(value) {
+  const ymd = asYmd(value);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!m) return ymd;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+function formatDateTimeFr(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function setSavePresenceStatus(message, tone = 'info') {
+  if (!savePresenceStatus) return;
+  if (savePresenceStatusTimer) clearTimeout(savePresenceStatusTimer);
+  const colors = {
+    info: 'text-slate-500',
+    success: 'text-green-700',
+    error: 'text-red-700'
+  };
+  savePresenceStatus.className = `text-xs font-medium transition-opacity duration-300 ${colors[tone] || colors.info}`;
+  savePresenceStatus.textContent = message || '';
+  if (message) {
+    savePresenceStatusTimer = setTimeout(() => {
+      savePresenceStatus.textContent = '';
+    }, 5000);
+  }
+}
+
+function setPresenceSavesEmpty(message, icon = 'cloud_off') {
+  if (!presenceSavesEmpty) return;
+  const safeIcon = escapeHtml(icon);
+  const safeMessage = escapeHtml(message);
+  presenceSavesEmpty.innerHTML = `
+    <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div class="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-4 border border-slate-100">
+        <span class="material-symbols-outlined text-3xl text-slate-300">${safeIcon}</span>
+      </div>
+      <p class="text-slate-500 font-medium tracking-tight">${safeMessage}</p>
+    </div>`;
+  presenceSavesEmpty.classList.remove('hidden');
+}
+
+function renderPresenceSaves(list) {
+  if (!presenceSavesRows) return;
+  if (!list.length) {
+    presenceSavesRows.innerHTML = '';
+    setPresenceSavesEmpty('Aucune sauvegarde disponible', 'folder_off');
+    return;
+  }
+
+  if (presenceSavesEmpty) presenceSavesEmpty.classList.add('hidden');
+  presenceSavesRows.innerHTML = list.map((save) => {
+    const safeMeetingLabel = escapeHtml(`Réunion du ${formatYmdFr(save.presence_date)}`);
+    const count = Number(save.participant_count || 0);
+    const safeCountLabel = escapeHtml(`${count} participant${count > 1 ? 's' : ''}`);
+    const safeSavedAt = escapeHtml(formatDateTimeFr(save.saved_at));
+    const safeDownloadUrl = escapeHtml(`/api/presence-saves/${encodeURIComponent(save.id)}.csv`);
+
+    return `
+      <tr class="hover:bg-orange-50/30 transition-colors border-b border-slate-100 last:border-0">
+        <td class="px-6 py-4 font-semibold text-slate-900">
+          ${safeMeetingLabel}
+        </td>
+        <td class="px-6 py-4">
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+            ${safeCountLabel}
+          </span>
+        </td>
+        <td class="px-6 py-4 text-sm text-slate-500">
+          ${safeSavedAt}
+        </td>
+        <td class="px-6 py-4 text-right">
+          <a href="${safeDownloadUrl}" class="inline-flex items-center gap-1.5 text-sm font-bold text-orange-600 hover:text-red-700 transition-colors" download>
+            <span class="material-symbols-outlined text-lg">cloud_download</span>
+            Télécharger
+          </a>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+async function fetchPresenceSaves() {
+  try {
+    setPresenceSavesEmpty('Chargement des sauvegardes...', 'cloud_sync');
+    const r = await fetch('/api/presence-saves');
+    if (r.status === 401) {
+      location.href = '/admin/login';
+      return;
+    }
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(txt || `HTTP ${r.status}`);
+    }
+    presenceSaves = await r.json();
+    renderPresenceSaves(presenceSaves);
+  } catch (err) {
+    presenceSaves = [];
+    if (presenceSavesRows) presenceSavesRows.innerHTML = '';
+    setPresenceSavesEmpty('Impossible de charger les sauvegardes', 'error');
+  }
 }
 
 function showDetails(x) {
@@ -201,6 +318,47 @@ async function fetchInscriptions() {
   }
 }
 
+async function savePresence() {
+  const presenceDate = (presenceDateInput?.value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(presenceDate)) {
+    setSavePresenceStatus('Choisissez une date de présence.', 'error');
+    presenceDateInput?.focus();
+    return;
+  }
+
+  try {
+    if (savePresenceBtn) {
+      savePresenceBtn.disabled = true;
+      savePresenceBtn.classList.add('opacity-70', 'cursor-wait');
+    }
+    setSavePresenceStatus('Sauvegarde en cours...', 'info');
+    const r = await fetch('/api/presence-saves', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ presence_date: presenceDate })
+    });
+    if (r.status === 401) {
+      location.href = '/admin/login';
+      return;
+    }
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${r.status}`);
+    }
+    const saved = await r.json();
+    const count = Number(saved.participant_count || 0);
+    setSavePresenceStatus(`Sauvegarde créée: ${count} participant${count > 1 ? 's' : ''}.`, 'success');
+    await fetchPresenceSaves();
+  } catch (err) {
+    setSavePresenceStatus(`Erreur: ${String(err && err.message ? err.message : err)}`, 'error');
+  } finally {
+    if (savePresenceBtn) {
+      savePresenceBtn.disabled = false;
+      savePresenceBtn.classList.remove('opacity-70', 'cursor-wait');
+    }
+  }
+}
+
 searchInput?.addEventListener('input', () => {
   if (searchMobileInput) searchMobileInput.value = searchInput.value;
   applySearch();
@@ -226,5 +384,7 @@ async function logout() {
 
 logoutBtn?.addEventListener('click', logout);
 logoutBtnMobile?.addEventListener('click', logout);
+savePresenceBtn?.addEventListener('click', savePresence);
 
 fetchInscriptions();
+fetchPresenceSaves();

@@ -37,7 +37,9 @@ const pool = USE_MEMORY_DB
 // In-memory fallback (local dev only)
 const mem = {
   seq: 1,
-  inscriptions: []
+  saveSeq: 1,
+  inscriptions: [],
+  presenceSaves: []
 };
 
 app.use(express.json({ limit: '6mb' }));
@@ -80,6 +82,49 @@ function escapeCsv(value) {
 
 function normalizeSpaces(s) {
   return String(s || '').replace(/\s+/g, ' ').trim();
+}
+
+function isYmd(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim());
+}
+
+function asYmd(value) {
+  if (!value) return '';
+  const s = String(value);
+  if (isYmd(s)) return s;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toISOString().slice(0, 10);
+}
+
+const INSCRIPTION_CSV_HEADERS = [
+  'id',
+  'presence_date',
+  'created_at',
+  'nom',
+  'prenom',
+  'date_naissance',
+  'sexe',
+  'situation_relationnelle',
+  'profession',
+  'telephone',
+  'photo',
+  'vicariat',
+  'paroisse',
+  'commentaires'
+];
+
+function buildInscriptionsCsv(rows) {
+  return [
+    INSCRIPTION_CSV_HEADERS.join(','),
+    ...rows.map((r) => INSCRIPTION_CSV_HEADERS.map((h) => escapeCsv(r[h])).join(','))
+  ].join('\n');
+}
+
+function sendCsv(res, filename, csv) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send('\uFEFF' + csv);
 }
 
 // Lettres (avec accents), espaces, apostrophe et tiret.
@@ -159,31 +204,7 @@ app.get('/api/inscriptions.csv', requireAdmin, async (_req, res) => {
         ? mem.inscriptions.filter((r) => r.presence_date === presenceDate).slice().reverse()
         : mem.inscriptions.slice().reverse();
 
-      const headers = [
-        'id',
-        'presence_date',
-        'created_at',
-        'nom',
-        'prenom',
-        'date_naissance',
-        'sexe',
-        'situation_relationnelle',
-        'profession',
-        'telephone',
-        'photo',
-        'vicariat',
-        'paroisse',
-        'commentaires'
-      ];
-
-      const csv = [
-        headers.join(','),
-        ...rows.map((r) => headers.map((h) => escapeCsv(r[h])).join(','))
-      ].join('\n');
-
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', 'attachment; filename="inscriptions.csv"');
-      return res.send('\uFEFF' + csv);
+      return sendCsv(res, 'inscriptions.csv', buildInscriptionsCsv(rows));
     }
 
     const presenceDate = (_req.query && String(_req.query.date || '').trim()) || '';
@@ -194,31 +215,111 @@ app.get('/api/inscriptions.csv', requireAdmin, async (_req, res) => {
 
     const result = await pool.query(q, params);
     const rows = result.rows;
-    const headers = [
-      'id',
-      'presence_date',
-      'created_at',
-      'nom',
-      'prenom',
-      'date_naissance',
-      'sexe',
-      'situation_relationnelle',
-      'profession',
-      'telephone',
-      'photo',
-      'vicariat',
-      'paroisse',
-      'commentaires'
-    ];
+    sendCsv(res, 'inscriptions.csv', buildInscriptionsCsv(rows));
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur', details: String(err && err.message ? err.message : err) });
+  }
+});
 
-    const csv = [
-      headers.join(','),
-      ...rows.map((r) => headers.map((h) => escapeCsv(r[h])).join(','))
-    ].join('\n');
+app.get('/api/presence-saves', requireAdmin, async (_req, res) => {
+  try {
+    if (!pool) {
+      const rows = mem.presenceSaves
+        .slice()
+        .sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at))
+        .map(({ rows: _rows, ...save }) => save);
+      return res.json(rows);
+    }
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="inscriptions.csv"');
-    res.send('\uFEFF' + csv);
+    const { rows } = await pool.query(`
+      SELECT id, presence_date, saved_at, participant_count
+      FROM presence_saves
+      ORDER BY saved_at DESC, id DESC;
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur', details: String(err && err.message ? err.message : err) });
+  }
+});
+
+app.post('/api/presence-saves', requireAdmin, async (req, res) => {
+  try {
+    const presenceDate = String((req.body && req.body.presence_date) || '').trim();
+    if (!isYmd(presenceDate)) {
+      return res.status(400).json({ error: 'Date de présence invalide (format attendu: YYYY-MM-DD)' });
+    }
+
+    if (!pool) {
+      const rows = mem.inscriptions
+        .filter((r) => asYmd(r.presence_date) === presenceDate)
+        .slice()
+        .sort((a, b) => Number(a.id) - Number(b.id));
+      const save = {
+        id: mem.saveSeq++,
+        presence_date: presenceDate,
+        saved_at: new Date().toISOString(),
+        participant_count: rows.length,
+        rows
+      };
+      mem.presenceSaves.push(save);
+      const { rows: _rows, ...publicSave } = save;
+      return res.status(201).json(publicSave);
+    }
+
+    const selected = await pool.query(
+      'SELECT * FROM inscriptions WHERE presence_date = $1 ORDER BY id ASC',
+      [presenceDate]
+    );
+    const snapshotRows = selected.rows.map((row) => ({
+      ...row,
+      presence_date: asYmd(row.presence_date),
+      date_naissance: asYmd(row.date_naissance)
+    }));
+    const savedAt = new Date().toISOString();
+    const created = await pool.query(
+      `
+        INSERT INTO presence_saves (presence_date, saved_at, participant_count, rows)
+        VALUES ($1, $2, $3, $4::jsonb)
+        RETURNING id, presence_date, saved_at, participant_count;
+      `,
+      [presenceDate, savedAt, snapshotRows.length, JSON.stringify(snapshotRows)]
+    );
+    res.status(201).json(created.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur', details: String(err && err.message ? err.message : err) });
+  }
+});
+
+app.get('/api/presence-saves/:id.csv', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Sauvegarde invalide' });
+    }
+
+    if (!pool) {
+      const save = mem.presenceSaves.find((s) => Number(s.id) === id);
+      if (!save) return res.status(404).json({ error: 'Sauvegarde introuvable' });
+      return sendCsv(
+        res,
+        `presences-${save.presence_date}-sauvegarde-${save.id}.csv`,
+        buildInscriptionsCsv(save.rows)
+      );
+    }
+
+    const { rows } = await pool.query(
+      'SELECT id, presence_date, rows FROM presence_saves WHERE id = $1',
+      [id]
+    );
+    const save = rows[0];
+    if (!save) return res.status(404).json({ error: 'Sauvegarde introuvable' });
+
+    const snapshotRows = Array.isArray(save.rows) ? save.rows : [];
+    sendCsv(
+      res,
+      `presences-${asYmd(save.presence_date)}-sauvegarde-${save.id}.csv`,
+      buildInscriptionsCsv(snapshotRows)
+    );
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur', details: String(err && err.message ? err.message : err) });
   }
@@ -235,12 +336,12 @@ app.post('/api/inscriptions', async (req, res) => {
     }
 
   const dn = String(data.date_naissance || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dn)) {
+    if (!isYmd(dn)) {
       return res.status(400).json({ error: 'Date de naissance invalide (format attendu: YYYY-MM-DD)' });
     }
 
     const presenceDate = String(data.presence_date || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(presenceDate)) {
+    if (!isYmd(presenceDate)) {
       return res.status(400).json({ error: 'Date de présence invalide (format attendu: YYYY-MM-DD)' });
     }
 
@@ -347,6 +448,15 @@ async function start() {
         commentaires TEXT,
         presence_date DATE NOT NULL,
         created_at TIMESTAMPTZ NOT NULL
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS presence_saves (
+        id BIGSERIAL PRIMARY KEY,
+        presence_date DATE NOT NULL,
+        saved_at TIMESTAMPTZ NOT NULL,
+        participant_count INTEGER NOT NULL DEFAULT 0,
+        rows JSONB NOT NULL
       );
     `);
   }
