@@ -12,10 +12,37 @@ const useSupabase = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SER
 let db;
 if (!useSupabase) {
   db = new Database(path.join(__dirname, 'data', 'rccb.db'));
-  db.exec(`CREATE TABLE IF NOT EXISTS inscriptions (id INTEGER PRIMARY KEY AUTOINCREMENT, presence_date TEXT, nom TEXT NOT NULL, prenom TEXT NOT NULL, date_naissance TEXT, age INTEGER, sexe TEXT NOT NULL, situation_relationnelle TEXT, profession TEXT, telephone TEXT, photo TEXT, vicariat TEXT NOT NULL, paroisse TEXT NOT NULL, commentaires TEXT, created_at TEXT NOT NULL);`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS inscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      presence_date TEXT,
+      nom TEXT NOT NULL,
+      prenom TEXT NOT NULL,
+      date_naissance TEXT,
+      age INTEGER,
+      sexe TEXT NOT NULL,
+      situation_relationnelle TEXT,
+      profession TEXT,
+      telephone TEXT,
+      photo TEXT,
+      vicariat TEXT NOT NULL,
+      paroisse TEXT NOT NULL,
+      commentaires TEXT,
+      created_at TEXT NOT NULL
+    );
+  `);
+
   const existingColumns = db.prepare('PRAGMA table_info(inscriptions)').all().map((c) => c.name);
-  const neededColumns = { presence_date: 'TEXT', date_naissance: 'TEXT', situation_relationnelle: 'TEXT' };
-  for (const [name, type] of Object.entries(neededColumns)) if (!existingColumns.includes(name)) db.exec(`ALTER TABLE inscriptions ADD COLUMN ${name} ${type};`);
+  const neededColumns = {
+    presence_date: 'TEXT',
+    date_naissance: 'TEXT',
+    situation_relationnelle: 'TEXT'
+  };
+  for (const [name, type] of Object.entries(neededColumns)) {
+    if (!existingColumns.includes(name)) {
+      db.exec(`ALTER TABLE inscriptions ADD COLUMN ${name} ${type};`);
+    }
+  }
 }
 
 app.use(express.json({ limit: '2mb' }));
@@ -44,34 +71,71 @@ app.post('/api/admin/login', (req, res) => {
 });
 app.post('/api/admin/logout', (_req, res) => { res.setHeader('Set-Cookie', 'rccb_admin=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'); return res.json({ ok: true }); });
 
-app.get('/api/inscriptions', requireAdmin, async (req, res) => {
+app.get('/api/inscriptions', async (req, res) => {
   try {
-    const date = asText(req.query.date);
-    if (useSupabase) return res.json(await supabaseRequest(`inscriptions?select=*&order=created_at.desc${date ? `&presence_date=eq.${encodeURIComponent(date)}` : ''}`));
-    return res.json(date ? db.prepare('SELECT * FROM inscriptions WHERE presence_date = ? ORDER BY id DESC').all(date) : db.prepare('SELECT * FROM inscriptions ORDER BY id DESC').all());
-  } catch (error) { return res.status(500).json({ error: error.message }); }
-});
+    if (useSupabase) {
+      const date = asText(req.query.date);
+      const filter = date ? `&presence_date=eq.${encodeURIComponent(date)}` : '';
+      const rows = await supabaseRequest(`inscriptions?select=*&order=created_at.desc${filter}`);
+      return res.json(rows);
+    }
 
-app.get('/api/inscriptions.csv', requireAdmin, async (req, res) => {
-  const date = asText(req.query.date);
-  const rows = useSupabase ? await supabaseRequest(`inscriptions?select=*&order=created_at.desc${date ? `&presence_date=eq.${encodeURIComponent(date)}` : ''}`) : (date ? db.prepare('SELECT * FROM inscriptions WHERE presence_date = ? ORDER BY id DESC').all(date) : db.prepare('SELECT * FROM inscriptions ORDER BY id DESC').all());
-  const header = ['presence_date','nom','prenom','date_naissance','sexe','situation_relationnelle','profession','telephone','vicariat','paroisse','commentaires'];
-  const csv = [header.join(',')].concat(rows.map((r) => header.map((k) => `"${String(r[k] || '').replaceAll('"', '""')}"`).join(','))).join('\n');
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.send(csv);
+    const date = asText(req.query.date);
+    const rows = date
+      ? db.prepare('SELECT * FROM inscriptions WHERE presence_date = ? ORDER BY id DESC').all(date)
+      : db.prepare('SELECT * FROM inscriptions ORDER BY id DESC').all();
+    return res.json(rows);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/api/inscriptions', async (req, res) => {
   const data = req.body || {};
+  const derivedAge = data.age ? Number(data.age) : computeAgeFromDate(data.date_naissance || data.dateNaissance);
   const required = ['presence_date', 'nom', 'prenom', 'date_naissance', 'sexe', 'situation_relationnelle', 'vicariat', 'paroisse'];
   const missing = required.filter((k) => !data[k]);
-  if (missing.length) return res.status(400).json({ error: `Champs obligatoires manquants: ${missing.join(', ')}` });
-  const age = computeAgeFromDate(data.date_naissance || data.dateNaissance);
-  if (!Number.isFinite(age) || age < 1 || age > 120) return res.status(400).json({ error: 'Date de naissance invalide.' });
-  const payload = { presence_date: asText(data.presence_date), nom: asText(data.nom), prenom: asText(data.prenom), date_naissance: asText(data.date_naissance || data.dateNaissance), age, sexe: asText(data.sexe), situation_relationnelle: asText(data.situation_relationnelle), profession: asText(data.profession), telephone: asText(data.telephone), photo: asText(data.photo), vicariat: asText(data.vicariat), paroisse: asText(data.paroisse), commentaires: asText(data.commentaires), created_at: new Date().toISOString() };
+
+  if (missing.length) {
+    return res.status(400).json({ error: `Champs obligatoires manquants: ${missing.join(', ')}` });
+  }
+
+  if (!Number.isFinite(derivedAge) || derivedAge < 1 || derivedAge > 120) {
+    return res.status(400).json({ error: 'Âge invalide. Renseigne un âge ou une date de naissance valide.' });
+  }
+
+  const payload = {
+    presence_date: asText(data.presence_date),
+    nom: asText(data.nom),
+    prenom: asText(data.prenom),
+    date_naissance: asText(data.date_naissance || data.dateNaissance),
+    age: Number.isFinite(derivedAge) ? derivedAge : null,
+    sexe: asText(data.sexe),
+    situation_relationnelle: asText(data.situation_relationnelle),
+    profession: asText(data.profession),
+    telephone: asText(data.telephone),
+    photo: asText(data.photo),
+    vicariat: asText(data.vicariat),
+    paroisse: asText(data.paroisse),
+    commentaires: asText(data.commentaires),
+    created_at: new Date().toISOString()
+  };
+
   try {
-    if (useSupabase) return res.status(201).json((await supabaseRequest('inscriptions', { method: 'POST', body: JSON.stringify([payload]) }))[0]);
-    const info = db.prepare('INSERT INTO inscriptions (presence_date, nom, prenom, date_naissance, age, sexe, situation_relationnelle, profession, telephone, photo, vicariat, paroisse, commentaires, created_at) VALUES (@presence_date, @nom, @prenom, @date_naissance, @age, @sexe, @situation_relationnelle, @profession, @telephone, @photo, @vicariat, @paroisse, @commentaires, @created_at)').run(payload);
+    if (useSupabase) {
+      const inserted = await supabaseRequest('inscriptions', {
+        method: 'POST',
+        body: JSON.stringify([payload])
+      });
+      return res.status(201).json(inserted[0]);
+    }
+
+    const stmt = db.prepare(`
+      INSERT INTO inscriptions (presence_date, nom, prenom, date_naissance, age, sexe, situation_relationnelle, profession, telephone, photo, vicariat, paroisse, commentaires, created_at)
+      VALUES (@presence_date, @nom, @prenom, @date_naissance, @age, @sexe, @situation_relationnelle, @profession, @telephone, @photo, @vicariat, @paroisse, @commentaires, @created_at)
+    `);
+
+    const info = stmt.run(payload);
     return res.status(201).json({ id: info.lastInsertRowid, ...payload });
   } catch (error) { return res.status(500).json({ error: error.message }); }
 });

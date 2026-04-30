@@ -10,7 +10,6 @@
   <header>
     <h1>Service de la coordination de la jeunesse du groupe de prière Renouveau Charismatique Catholique de l'archidiocèse</h1>
     <p>Plateforme de liste de présence pour les réunions</p>
-    <p><a href="/admin/login">Accès administrateur</a></p>
   </header>
 
   <main class="grid" style="grid-template-columns:1fr; max-width:900px; margin:0 auto;">
@@ -58,6 +57,23 @@
         <button type="submit">Enregistrer</button>
       </form>
       <p id="flash"></p>
+    </section>
+
+    <section class="card">
+      <h2>Dashboard</h2>
+      <div class="row">
+        <label>Filtrer par date de présence<input id="presenceDateFilter" type="date" /></label>
+      </div>
+      <div class="stats" id="stats"></div>
+      <input id="search" placeholder="Recherche..." />
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr><th>Date présence</th><th>Nom</th><th>Date de naissance</th><th>Sexe</th><th>Relation</th><th>Vicariat</th><th>Paroisse</th><th>Contact</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
