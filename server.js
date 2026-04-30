@@ -13,13 +13,15 @@ if (!useSupabase) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS inscriptions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      presence_date TEXT,
       nom TEXT NOT NULL,
       prenom TEXT NOT NULL,
-      age INTEGER NOT NULL,
+      date_naissance TEXT,
+      age INTEGER,
       sexe TEXT NOT NULL,
+      situation_relationnelle TEXT,
       profession TEXT,
       telephone TEXT,
-      email TEXT,
       photo TEXT,
       vicariat TEXT NOT NULL,
       paroisse TEXT NOT NULL,
@@ -27,6 +29,18 @@ if (!useSupabase) {
       created_at TEXT NOT NULL
     );
   `);
+
+  const existingColumns = db.prepare('PRAGMA table_info(inscriptions)').all().map((c) => c.name);
+  const neededColumns = {
+    presence_date: 'TEXT',
+    date_naissance: 'TEXT',
+    situation_relationnelle: 'TEXT'
+  };
+  for (const [name, type] of Object.entries(neededColumns)) {
+    if (!existingColumns.includes(name)) {
+      db.exec(`ALTER TABLE inscriptions ADD COLUMN ${name} ${type};`);
+    }
+  }
 }
 
 app.use(express.json({ limit: '2mb' }));
@@ -80,14 +94,19 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, storage: useSupabase ? 'supabase' : 'sqlite' });
 });
 
-app.get('/api/inscriptions', async (_req, res) => {
+app.get('/api/inscriptions', async (req, res) => {
   try {
     if (useSupabase) {
-      const rows = await supabaseRequest('inscriptions?select=*&order=created_at.desc');
+      const date = asText(req.query.date);
+      const filter = date ? `&presence_date=eq.${encodeURIComponent(date)}` : '';
+      const rows = await supabaseRequest(`inscriptions?select=*&order=created_at.desc${filter}`);
       return res.json(rows);
     }
 
-    const rows = db.prepare('SELECT * FROM inscriptions ORDER BY id DESC').all();
+    const date = asText(req.query.date);
+    const rows = date
+      ? db.prepare('SELECT * FROM inscriptions WHERE presence_date = ? ORDER BY id DESC').all(date)
+      : db.prepare('SELECT * FROM inscriptions ORDER BY id DESC').all();
     return res.json(rows);
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -97,7 +116,7 @@ app.get('/api/inscriptions', async (_req, res) => {
 app.post('/api/inscriptions', async (req, res) => {
   const data = req.body || {};
   const derivedAge = data.age ? Number(data.age) : computeAgeFromDate(data.date_naissance || data.dateNaissance);
-  const required = ['nom', 'prenom', 'sexe', 'vicariat', 'paroisse'];
+  const required = ['presence_date', 'nom', 'prenom', 'date_naissance', 'sexe', 'situation_relationnelle', 'vicariat', 'paroisse'];
   const missing = required.filter((k) => !data[k]);
 
   if (missing.length) {
@@ -109,13 +128,15 @@ app.post('/api/inscriptions', async (req, res) => {
   }
 
   const payload = {
+    presence_date: asText(data.presence_date),
     nom: asText(data.nom),
     prenom: asText(data.prenom),
+    date_naissance: asText(data.date_naissance || data.dateNaissance),
     age: Number.isFinite(derivedAge) ? derivedAge : null,
     sexe: asText(data.sexe),
+    situation_relationnelle: asText(data.situation_relationnelle),
     profession: asText(data.profession),
     telephone: asText(data.telephone),
-    email: asText(data.email),
     photo: asText(data.photo),
     vicariat: asText(data.vicariat),
     paroisse: asText(data.paroisse),
@@ -133,8 +154,8 @@ app.post('/api/inscriptions', async (req, res) => {
     }
 
     const stmt = db.prepare(`
-      INSERT INTO inscriptions (nom, prenom, age, sexe, profession, telephone, email, photo, vicariat, paroisse, commentaires, created_at)
-      VALUES (@nom, @prenom, @age, @sexe, @profession, @telephone, @email, @photo, @vicariat, @paroisse, @commentaires, @created_at)
+      INSERT INTO inscriptions (presence_date, nom, prenom, date_naissance, age, sexe, situation_relationnelle, profession, telephone, photo, vicariat, paroisse, commentaires, created_at)
+      VALUES (@presence_date, @nom, @prenom, @date_naissance, @age, @sexe, @situation_relationnelle, @profession, @telephone, @photo, @vicariat, @paroisse, @commentaires, @created_at)
     `);
 
     const info = stmt.run(payload);
