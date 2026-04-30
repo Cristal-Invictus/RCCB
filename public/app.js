@@ -20,6 +20,7 @@ const form = document.getElementById('inscriptionForm');
 const vicariatSelect = document.getElementById('vicariat');
 const paroisseSelect = document.getElementById('paroisse');
 const flash = document.getElementById('flash');
+const presenceDateFilter = document.getElementById('presenceDateFilter');
 
 function initVicariats() { /*...*/
   vicariatSelect.innerHTML = '<option value="">Choisir</option>';
@@ -35,6 +36,30 @@ function populateParoisses(v) {
     paroisseSelect.appendChild(o);
   });
 }
+
+function render(list) {
+  const total = list.length;
+  const men = list.filter((x) => x.sexe === 'Masculin').length;
+  const women = list.filter((x) => x.sexe === 'Féminin').length;
+
+  stats.innerHTML = `<div class="stat"><b>${total}</b><br>Total</div><div class="stat"><b>${men}</b><br>Hommes</div><div class="stat"><b>${women}</b><br>Femmes</div>`;
+  rows.innerHTML = list.map((x) => `<tr><td>${x.presence_date || ''}</td><td>${x.nom} ${x.prenom}</td><td>${x.date_naissance || ''}</td><td>${x.sexe}</td><td>${x.situation_relationnelle || ''}</td><td>${x.vicariat}</td><td>${x.paroisse}</td><td>${x.telephone || ''}</td></tr>`).join('');
+}
+
+function applySearch() {
+  const q = searchInput.value.trim().toLowerCase();
+  const filtered = inscriptions.filter((x) => [x.nom, x.prenom, x.vicariat, x.paroisse, x.profession, x.telephone, x.situation_relationnelle, x.presence_date, x.date_naissance].join(' ').toLowerCase().includes(q));
+  render(filtered);
+}
+
+async function fetchInscriptions() {
+  const d = (presenceDateFilter?.value || '').trim();
+  const url = d ? `/api/inscriptions?date=${encodeURIComponent(d)}` : '/api/inscriptions';
+  const r = await fetch(url);
+  inscriptions = await r.json();
+  applySearch();
+}
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   flash.textContent = '';
@@ -46,11 +71,15 @@ form.addEventListener('submit', async (e) => {
     flash.style.color = 'crimson';
     return;
   }
+
   flash.textContent = 'Présence enregistrée.';
   flash.style.color = 'green';
   form.reset();
   populateParoisses('');
 });
 vicariatSelect.addEventListener('change', (e) => populateParoisses(e.target.value));
+searchInput.addEventListener('input', applySearch);
+presenceDateFilter?.addEventListener('change', fetchInscriptions);
+
 initVicariats();
 populateParoisses('');
