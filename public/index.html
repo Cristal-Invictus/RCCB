@@ -3,30 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RCCB - Inscriptions</title>
+  <title>RCCB - Liste de présence</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <header>
-    <h1>Inscriptions RCCB Bénin</h1>
-    <p>Plateforme partagée (déployable) pour les inscriptions</p>
+    <h1>Service de la coordination de la jeunesse du groupe de prière Renouveau Charismatique Catholique de l'archidiocèse</h1>
+    <p>Plateforme de liste de présence pour les réunions</p>
+    <p><a href="/admin/login">Accès administrateur</a></p>
   </header>
 
-  <main class="grid">
+  <main class="grid" style="grid-template-columns:1fr; max-width:900px; margin:0 auto;">
     <section class="card">
-      <h2>Nouvelle inscription</h2>
+      <h2>Nouvelle présence</h2>
       <form id="inscriptionForm">
+        <div class="row">
+          <label>Date de présence<input type="date" name="presence_date" required /></label>
+          <label>Date de naissance<input type="date" name="date_naissance" required /></label>
+        </div>
         <div class="row">
           <label>Nom<input name="nom" required /></label>
           <label>Prénom<input name="prenom" required /></label>
         </div>
         <div class="row">
-          <label>Âge<input type="number" name="age" min="1" max="120" required /></label>
           <label>Sexe
             <select name="sexe" required>
               <option value="">Choisir</option>
               <option>Masculin</option>
               <option>Féminin</option>
+            </select>
+          </label>
+          <label>Situation relationnelle
+            <select name="situation_relationnelle" required>
+              <option value="">Choisir</option>
+              <option>Célibataire</option>
+              <option>Libre de toute relation</option>
+              <option>Engagé(e)</option>
+              <option>En couple</option>
             </select>
           </label>
         </div>
@@ -35,7 +48,6 @@
           <label>Téléphone<input name="telephone" /></label>
         </div>
         <div class="row">
-          <label>Email<input type="email" name="email" /></label>
           <label>Photo (URL)<input name="photo" /></label>
         </div>
         <div class="row">
@@ -46,20 +58,6 @@
         <button type="submit">Enregistrer</button>
       </form>
       <p id="flash"></p>
-    </section>
-
-    <section class="card">
-      <h2>Dashboard</h2>
-      <div class="stats" id="stats"></div>
-      <input id="search" placeholder="Recherche..." />
-      <div class="tableWrap">
-        <table>
-          <thead>
-            <tr><th>Date</th><th>Nom</th><th>Âge</th><th>Sexe</th><th>Vicariat</th><th>Paroisse</th><th>Contact</th></tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
     </section>
   </main>
 
