@@ -1,37 +1,158 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html class="light" lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RCCB - Admin Login</title>
-  <link rel="stylesheet" href="/styles.css" />
-</head>
-<body>
-  <header>
-    <h1>RCCB Admin</h1>
-    <p>Connexion</p>
-  </header>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'on-surface-variant': '#5a403e',
+            'on-error': '#ffffff',
+            tertiary: '#752e2b',
+            'secondary-fixed': '#ffe16d',
+            'on-surface': '#1c1b1b',
+            'on-primary': '#ffffff',
+            'surface-container': '#f0eded',
+            'surface-variant': '#e5e2e1',
+            'surface-bright': '#fcf9f8',
+            'outline-variant': '#e2beba',
+            'surface-container-highest': '#e5e2e1',
+            'secondary-container': '#fcd400',
+            secondary: '#705d00',
+            background: '#fcf9f8',
+            'surface-tint': '#b52424',
+            'primary-container': '#b22222',
+            outline: '#8e706d',
+            error: '#ba1a1a',
+            'surface-container-high': '#eae7e7',
+            surface: '#fcf9f8',
+            'surface-container-lowest': '#ffffff',
+            'surface-container-low': '#f6f3f2',
+            'on-background': '#1c1b1b',
+            primary: '#8f000d'
+          },
+          borderRadius: {
+            DEFAULT: '0.25rem',
+            lg: '0.5rem',
+            xl: '0.75rem',
+            full: '9999px'
+          },
+          spacing: {
+            xs: '8px',
+            sm: '16px',
+            xl: '64px',
+            base: '4px',
+            gutter: '24px',
+            md: '24px',
+            lg: '40px'
+          },
+          fontFamily: {
+            manrope: ['Manrope', 'sans-serif'],
+            body: ['Manrope', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
 
-  <main class="grid" style="grid-template-columns:1fr; max-width:720px; margin:0 auto;">
-    <section class="card">
-      <h2>Se connecter</h2>
-      <p class="hint">Entre le mot de passe admin. (En production, configure <code>ADMIN_TOKEN</code>.)</p>
-      <form id="loginForm">
-        <label>Mot de passe
-          <input name="password" type="password" autocomplete="current-password" required />
-        </label>
-        <button type="submit">Connexion</button>
-      </form>
-      <p id="flash"></p>
-    </section>
+    .divine-glow {
+      box-shadow: 0 0 20px rgba(252, 212, 0, 0.2);
+    }
+
+    .bg-spiritual-pattern {
+      background-color: #fcf9f8;
+      background-image: radial-gradient(circle at 2px 2px, #e2beba 1px, transparent 0);
+      background-size: 40px 40px;
+    }
+  </style>
+</head>
+<body class="bg-background font-body text-on-background min-h-screen flex flex-col">
+  <nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-3 bg-white border-t-4 border-yellow-500 border-b border-slate-100 shadow-sm">
+    <div class="flex items-center gap-2">
+      <a class="text-xl font-extrabold text-red-800 tracking-tighter" href="/">RCCB Admin</a>
+    </div>
+    <div class="flex items-center gap-6">
+      <a class="text-sm font-medium text-slate-600 hover:text-red-700 transition-colors duration-200" href="/">Accueil</a>
+      <span class="text-sm font-medium text-red-800">Login</span>
+    </div>
+  </nav>
+
+  <main class="flex-grow pt-xl pb-xl flex items-center justify-center bg-spiritual-pattern relative overflow-hidden">
+    <div class="absolute top-0 right-0 w-1/3 h-1/3 bg-red-100 opacity-60 rounded-full blur-3xl -mr-20 -mt-20"></div>
+    <div class="absolute bottom-0 left-0 w-1/4 h-1/4 bg-yellow-100 opacity-70 rounded-full blur-3xl -ml-20 -mb-20"></div>
+
+    <div class="mx-auto px-gutter flex flex-col items-center relative z-10">
+      <section class="w-full max-w-md bg-surface-container-lowest rounded-xl shadow-xl divine-glow border-t-2 border-secondary overflow-hidden">
+        <div class="pt-lg px-lg text-center flex flex-col items-center">
+          <div class="w-16 h-16 bg-primary-container rounded-full flex items-center justify-center mb-md text-on-primary shadow-lg">
+            <span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+          </div>
+          <h1 class="text-[28px] leading-tight font-bold text-primary mb-xs">Accès Administrateur</h1>
+          <p class="text-on-surface-variant px-md leading-relaxed">Connectez-vous pour gérer les enregistrements et les présences.</p>
+        </div>
+
+        <form id="loginForm" class="p-lg space-y-md">
+          <div>
+            <div class="flex justify-between items-center mb-base">
+              <label class="text-sm leading-none tracking-wider font-semibold uppercase text-on-surface-variant" for="password">Mot de passe</label>
+            </div>
+            <div class="relative">
+              <input class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant focus:border-primary-container focus:ring-0 outline-none py-3 pl-xs pr-10 transition-all text-on-surface placeholder-outline-variant" id="password" name="password" autocomplete="current-password" placeholder="••••••••" type="password" required />
+              <span class="material-symbols-outlined absolute right-2 top-3 text-outline-variant">lock</span>
+            </div>
+          </div>
+
+          <p id="flash" class="min-h-6 text-sm font-medium" aria-live="polite"></p>
+
+          <div class="pt-base flex flex-col gap-sm">
+            <button class="w-full bg-primary-container text-on-primary font-bold py-4 rounded-lg shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2" type="submit">
+              <span>Se connecter</span>
+              <span class="material-symbols-outlined">login</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="h-1 bg-gradient-to-r from-primary via-secondary to-primary opacity-30"></div>
+      </section>
+
+      <p class="mt-lg text-on-surface-variant text-sm italic text-center max-w-sm">
+        "Que le feu de l'Esprit Saint brûle en nous et guide chacune de nos actions."
+      </p>
+    </div>
   </main>
+
+  <footer class="bg-slate-50 border-t border-slate-200">
+    <div class="w-full py-8 px-6 flex flex-col md:flex-row justify-between items-center gap-4 max-w-7xl mx-auto">
+      <div class="flex flex-col items-center md:items-start gap-1">
+        <span class="text-lg font-bold text-red-800">RCCB</span>
+        <p class="text-xs text-slate-500">© 2024 Renouveau Charismatique Catholique du Bénin. All rights reserved.</p>
+      </div>
+      <div class="flex gap-6">
+        <a class="text-xs text-slate-500 hover:text-red-800 underline decoration-yellow-500 transition-all duration-200" href="/">Accueil</a>
+        <a class="text-xs text-slate-500 hover:text-red-800 underline decoration-yellow-500 transition-all duration-200" href="/admin">Admin</a>
+      </div>
+    </div>
+  </footer>
 
   <script>
     const form = document.getElementById('loginForm');
     const flash = document.getElementById('flash');
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       flash.textContent = '';
+      flash.className = 'min-h-6 text-sm font-medium';
 
       const password = new FormData(form).get('password');
       try {
@@ -47,17 +168,17 @@
             const data = await r.json();
             msg = data.error || msg;
           } catch {
-            // ignore
+            // ignore invalid JSON responses
           }
           flash.textContent = msg;
-          flash.style.color = 'crimson';
+          flash.className = 'min-h-6 text-sm font-medium text-red-700';
           return;
         }
 
         location.href = '/admin';
       } catch (err) {
         flash.textContent = `Erreur réseau: ${String(err && err.message ? err.message : err)}`;
-        flash.style.color = 'crimson';
+        flash.className = 'min-h-6 text-sm font-medium text-red-700';
       }
     });
   </script>

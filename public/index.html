@@ -1,168 +1,282 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html class="light" lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plateforme d'enregistrement des participants</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plateforme d'enregistrement des participants (RCC Benin)</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'on-background': '#1c1b1b',
+            'outline-variant': '#e2beba',
+            'surface-bright': '#fcf9f8',
+            'on-secondary': '#ffffff',
+            'surface-variant': '#e5e2e1',
+            'on-secondary-container': '#6e5c00',
+            'secondary-container': '#fcd400',
+            outline: '#8e706d',
+            'surface-container-highest': '#e5e2e1',
+            'surface-container-high': '#eae7e7',
+            'surface-container': '#f0eded',
+            'on-surface': '#1c1b1b',
+            error: '#ba1a1a',
+            surface: '#fcf9f8',
+            'surface-container-low': '#f6f3f2',
+            'primary-container': '#b22222',
+            'secondary-fixed': '#ffe16d',
+            primary: '#8f000d',
+            'surface-container-lowest': '#ffffff',
+            secondary: '#705d00',
+            background: '#fcf9f8',
+            'on-surface-variant': '#5a403e',
+            'on-primary': '#ffffff'
+          },
+          borderRadius: {
+            DEFAULT: '0.25rem',
+            lg: '0.5rem',
+            xl: '0.75rem',
+            full: '9999px'
+          },
+          spacing: {
+            gutter: '24px',
+            lg: '40px',
+            base: '4px',
+            xl: '64px',
+            sm: '16px',
+            xs: '8px',
+            md: '24px'
+          },
+          fontFamily: {
+            manrope: ['Manrope', 'sans-serif'],
+            body: ['Manrope', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    .spirit-shadow {
+      box-shadow: 0 10px 20px -5px rgba(178, 34, 34, 0.08);
+    }
+
+    .gold-glow {
+      box-shadow: 0 0 15px rgba(252, 212, 0, 0.3);
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+
+    .input-spirit {
+      background-color: #f0eded;
+      border: 0;
+      border-bottom: 2px solid #8f000d;
+      transition: border-bottom-width 0.2s ease, background-color 0.2s ease;
+    }
+
+    .input-spirit:focus {
+      background-color: #ffffff;
+      border-bottom-width: 4px;
+      box-shadow: none;
+      outline: none;
+    }
+
+    .flash[data-type='success'] {
+      color: #166534;
+    }
+
+    .flash[data-type='error'] {
+      color: #b91c1c;
+    }
+  </style>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <div class="logo">RCC Benin</div>
-            <nav>
-                <a href="#" class="active">Enregistrement</a>
-                <a href="/admin/login">Accès Admin</a>
-                <a href="#">Support</a>
-            </nav>
-            <div class="icons">
-                <i class="fa-regular fa-bell"></i>
-                <i class="fa-regular fa-circle-question"></i>
-            </div>
-        </header>
-
-        <main>
-            <section class="intro">
-                <p class="mission">SACRÉE MISSION</p>
-                <h1>Plateforme d'enregistrement des participants</h1>
-                <p>Rejoignez la communion spirituelle du Renouveau Charismatique Catholique du Bénin. <br>Veuillez remplir le formulaire ci-dessous avec ferveur et exactitude.</p>
-                <div class="quote">
-                    <p>"Car là où deux ou trois sont assemblés en mon nom, je suis au milieu d'eux."</p>
-                    <p class="author">- Matthieu 18:20</p>
-                </div>
-            </section>
-
-            <form id="registration-form" novalidate>
-                <section class="form-section">
-                    <h2 class="section-title"><i class="fa-solid fa-user"></i> INFORMATIONS PERSONNELLES</h2>
-                    <div class="form-grid">
-                        <div class="form-group photo-upload">
-                            <div class="photo-placeholder">
-                                <i class="fa-solid fa-camera"></i>
-                                <span>PHOTO (UPLOAD)</span>
-                            </div>
-                            <small>Format JPG ou PNG max 2Mo</small>
-                            <input type="file" id="photo" name="photo" accept="image/jpeg, image/png" style="display: none;">
-                        </div>
-                        <div class="personal-info-fields">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="presence-date">DATE DE PRÉSENCE</label>
-                                    <input type="date" id="presence-date" name="presence_date" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="sex">SEXE</label>
-                                    <select id="sex" name="sexe" required>
-                                        <option value="">Sélectionner</option>
-                                        <option value="homme">Homme</option>
-                                        <option value="femme">Femme</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="last-name">NOM</label>
-                                    <input type="text" id="last-name" name="nom" placeholder="Entrez votre nom" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="first-name">PRÉNOM</label>
-                                    <input type="text" id="first-name" name="prenom" placeholder="Entrez votre prénom" required>
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="birth-date">DATE DE NAISSANCE</label>
-                                    <input type="date" id="birth-date" name="date_naissance" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="relationship-status">SITUATION RELATIONNELLE</label>
-                                    <select id="relationship-status" name="situation_relationnelle">
-                                        <option value="">Sélectionner</option>
-                                        <option value="celibataire">Célibataire</option>
-                                        <option value="marie">Marié(e)</option>
-                                        <option value="autre">Autre</option>
-                                    </select>
-                                </div>
-                            </div>
-                             <div class="form-row">
-                                <div class="form-group member-status">
-                                    <label>STATUT DU MEMBRE</label>
-                                    <div class="radio-group">
-                                        <input type="radio" id="new-member" name="member-status" value="nouveau" checked>
-                                        <label for="new-member" class="radio-label">Nouveau</label>
-                                        <input type="radio" id="old-member" name="member-status" value="ancien">
-                                        <label for="old-member" class="radio-label">Ancien</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="profession">PROFESSION</label>
-                                    <input type="text" id="profession" name="profession" placeholder="Votre métier">
-                                </div>
-                                <div class="form-group">
-                                    <label for="phone">TÉLÉPHONE</label>
-                                    <div class="phone-input">
-                                        <span>+229</span>
-                                        <input type="tel" id="phone" name="telephone" placeholder="01XXXXXXXX">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="form-section">
-                    <h2 class="section-title"><i class="fa-solid fa-church"></i> DÉTAILS INSTITUTIONNELS</h2>
-                    <div class="institution-fields">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="vicariat">VICARIAT</label>
-                                <select id="vicariat" name="vicariat" required>
-                                    <option value="">Choisir le vicariat</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="paroisse">PAROISSE</label>
-                                <select id="paroisse" name="paroisse" required>
-                                    <option value="">Choisir la paroisse</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group motivations">
-                            <label for="motivations">MOTIVATIONS</label>
-                            <textarea id="motivations" name="commentaires" placeholder="Quelles sont les motivations qui vous amènent à rejoindre le Service Jeune du Renouveau Charismatique Catholique du Bénin ?"></textarea>
-                        </div>
-                    </div>
-                </section>
-
-                <p id="flash" class="flash" aria-live="polite"></p>
-
-                <div class="form-buttons">
-                    <button type="reset" class="reset-btn"><i class="fa-solid fa-rotate-right"></i> RÉINITIALISER</button>
-                    <button type="submit" class="submit-btn"><i class="fa-solid fa-user-plus"></i> ENREGISTRER LE PARTICIPANT</button>
-                </div>
-            </form>
-            <div class="theme-toggle">
-                <i class="fa-solid fa-sun"></i>
-            </div>
-        </main>
-
-        <footer>
-            <div class="footer-content">
-                <div class="footer-logo">
-                    <p>RCC Benin</p>
-                    <p>© 2024 Renouveau Charismatique Catholique du Bénin (RCCB)</p>
-                </div>
-                <div class="footer-links">
-                    <a href="#">Confidentialité</a>
-                    <a href="#">Conditions d'utilisation</a>
-                    <a href="#">Contactez-nous</a>
-                </div>
-            </div>
-        </footer>
+<body class="bg-background font-body text-on-background">
+  <nav class="bg-white/95 backdrop-blur-md border-b-2 border-slate-100 shadow-sm sticky top-0 z-50">
+    <div class="flex justify-between items-center w-full px-6 py-4 max-w-screen-2xl mx-auto">
+      <a class="text-xl font-extrabold tracking-tighter text-red-800 border-l-4 border-amber-400 pl-3" href="/">
+        RCC Benin
+      </a>
+      <div class="hidden md:flex gap-8 items-center text-sm font-medium tracking-tight">
+        <a class="text-red-800 font-bold border-b-2 border-amber-500 pb-1" href="/">Enregistrement</a>
+        <a class="text-slate-600 hover:text-red-700 transition-colors" href="/admin/login">Accès Admin</a>
+        <a class="text-slate-600 hover:text-red-700 transition-colors" href="#">Support</a>
+      </div>
+      <div class="flex items-center gap-4">
+        <a class="hover:bg-slate-50 rounded-md transition-all p-2" href="/admin/login" aria-label="Accès administrateur">
+          <span class="material-symbols-outlined text-slate-600">account_circle</span>
+        </a>
+      </div>
     </div>
-    <script src="app.js"></script>
+  </nav>
+
+  <main class="max-w-5xl mx-auto px-6 pt-16 pb-24">
+    <header class="mb-16">
+      <div class="flex items-center gap-4 mb-4">
+        <div class="h-px flex-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+        <span class="text-secondary uppercase tracking-[0.2em] text-sm font-semibold">Sacrée Mission</span>
+        <div class="h-px flex-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+      </div>
+      <h1 class="text-4xl md:text-5xl leading-tight font-extrabold text-primary text-center mb-6">Plateforme d'enregistrement des participants</h1>
+      <p class="text-center text-on-surface-variant max-w-2xl mx-auto text-lg leading-relaxed">
+        Rejoignez la communion spirituelle du Renouveau Charismatique Catholique du Bénin. Veuillez remplir le formulaire ci-dessous avec ferveur et exactitude.
+      </p>
+    </header>
+
+    <div class="bg-surface-container-low border-l-4 border-secondary-container p-8 mb-16 spirit-shadow rounded-lg italic">
+      <p class="text-on-surface-variant text-lg leading-relaxed">
+        "Car là où deux ou trois sont assemblés en mon nom, je suis au milieu d'eux."
+        <span class="not-italic font-bold text-primary block mt-2 text-sm">- Matthieu 18:20</span>
+      </p>
+    </div>
+
+    <form id="registration-form" class="space-y-16" novalidate>
+      <section class="bg-surface-container-lowest rounded-xl border-t-2 border-secondary spirit-shadow p-8 md:p-12">
+        <div class="flex items-center gap-3 mb-10">
+          <span class="material-symbols-outlined text-primary text-3xl">person</span>
+          <h2 class="text-2xl md:text-4xl leading-tight font-bold text-on-surface">INFORMATIONS PERSONNELLES</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-10">
+          <div class="md:col-span-4 lg:col-span-3">
+            <div class="form-group photo-upload relative group">
+              <div class="photo-placeholder w-full aspect-square bg-surface-container-high rounded-xl border-2 border-dashed border-outline-variant flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container-highest transition-all overflow-hidden">
+                <span class="material-symbols-outlined text-outline text-5xl mb-2">add_a_photo</span>
+                <span class="text-xs font-semibold text-outline-variant uppercase tracking-widest">Photo (Upload)</span>
+              </div>
+              <p class="mt-3 text-xs text-center text-on-surface-variant">Format JPG ou PNG max 2Mo</p>
+              <input class="hidden" type="file" id="photo" name="photo" accept="image/jpeg, image/png" />
+            </div>
+          </div>
+
+          <div class="md:col-span-8 lg:col-span-9 grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <div class="flex flex-col gap-2">
+              <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="presence-date">Date de présence</label>
+              <input class="input-spirit p-3 rounded-t-lg" type="date" id="presence-date" name="presence_date" required />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="sex">Sexe</label>
+              <select class="input-spirit p-3 rounded-t-lg appearance-none" id="sex" name="sexe" required>
+                <option value="">Sélectionner</option>
+                <option value="homme">Homme</option>
+                <option value="femme">Femme</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="last-name">Nom</label>
+              <input class="input-spirit p-3 rounded-t-lg" type="text" id="last-name" name="nom" placeholder="Entrez votre nom" required />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="first-name">Prénom</label>
+              <input class="input-spirit p-3 rounded-t-lg" type="text" id="first-name" name="prenom" placeholder="Entrez votre prénom" required />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="birth-date">Date de naissance</label>
+              <input class="input-spirit p-3 rounded-t-lg" type="date" id="birth-date" name="date_naissance" required />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="relationship-status">Situation relationnelle</label>
+              <select class="input-spirit p-3 rounded-t-lg appearance-none" id="relationship-status" name="situation_relationnelle">
+                <option value="">Sélectionner</option>
+                <option value="celibataire">Célibataire</option>
+                <option value="marie">Marié(e)</option>
+                <option value="religieux">Religieux / Religieuse</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-2">
+              <span class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider">Statut du membre</span>
+              <div class="flex gap-6 mt-2">
+                <label class="flex items-center gap-2 cursor-pointer normal-case tracking-normal text-base text-on-surface">
+                  <input checked class="w-4 h-4 text-primary border-outline focus:ring-primary" id="new-member" name="member-status" type="radio" value="nouveau" />
+                  <span class="font-medium">Nouveau</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer normal-case tracking-normal text-base text-on-surface">
+                  <input class="w-4 h-4 text-primary border-outline focus:ring-primary" id="old-member" name="member-status" type="radio" value="ancien" />
+                  <span class="font-medium">Ancien</span>
+                </label>
+              </div>
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="profession">Profession</label>
+              <input class="input-spirit p-3 rounded-t-lg" type="text" id="profession" name="profession" placeholder="Votre métier" />
+            </div>
+            <div class="flex flex-col gap-2 sm:col-span-2">
+              <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="phone">Téléphone</label>
+              <div class="flex gap-2">
+                <span class="bg-surface-container-high px-3 flex items-center rounded-t-lg text-sm border-b-2 border-primary">+229</span>
+                <input class="input-spirit p-3 rounded-t-lg flex-1 min-w-0" type="tel" id="phone" name="telephone" placeholder="01XXXXXXXX" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-surface-container-lowest rounded-xl border-t-2 border-secondary spirit-shadow p-8 md:p-12">
+        <div class="flex items-center gap-3 mb-10">
+          <span class="material-symbols-outlined text-primary text-3xl">church</span>
+          <h2 class="text-2xl md:text-4xl leading-tight font-bold text-on-surface">DÉTAILS INSTITUTIONNELS</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div class="flex flex-col gap-2">
+            <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="vicariat">Vicariat</label>
+            <select class="input-spirit p-3 rounded-t-lg appearance-none" id="vicariat" name="vicariat" required>
+              <option value="">Choisir le vicariat</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-2">
+            <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="paroisse">Paroisse</label>
+            <select class="input-spirit p-3 rounded-t-lg appearance-none" id="paroisse" name="paroisse" required>
+              <option value="">Choisir la paroisse</option>
+            </select>
+          </div>
+          <div class="md:col-span-2 flex flex-col gap-2">
+            <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="motivations">Motivations</label>
+            <textarea class="input-spirit p-3 rounded-t-lg resize-none" id="motivations" name="commentaires" placeholder="Quelles sont les motivations qui vous amènent à rejoindre le Service Jeune du Renouveau Charismatique Catholique du Bénin ?" rows="4"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <p id="flash" class="flash min-h-6 text-sm font-semibold text-center" aria-live="polite"></p>
+
+      <div class="flex flex-col sm:flex-row justify-end items-center gap-6 pt-8">
+        <button class="w-full sm:w-auto px-8 py-4 font-bold text-primary border-2 border-primary rounded-lg hover:bg-surface-container-high transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2" type="reset">
+          <span class="material-symbols-outlined">restart_alt</span>
+          Réinitialiser
+        </button>
+        <button class="w-full sm:w-auto px-10 py-4 font-bold text-white bg-primary rounded-lg spirit-shadow hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest text-sm gold-glow flex items-center justify-center gap-2" type="submit">
+          <span class="material-symbols-outlined">how_to_reg</span>
+          Enregistrer le participant
+        </button>
+      </div>
+    </form>
+
+    <div class="mt-24 text-center">
+      <div class="inline-block p-4 rounded-full bg-secondary-container/20">
+        <span class="material-symbols-outlined text-secondary-container text-4xl" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-slate-50 border-t border-slate-200 mt-16">
+    <div class="w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center gap-4 max-w-7xl mx-auto text-xs text-slate-500">
+      <div class="flex flex-col items-center md:items-start gap-2">
+        <span class="font-bold text-red-800">RCC Benin</span>
+        <p>© 2024 Renouveau Charismatique Catholique du Bénin (RCCB)</p>
+      </div>
+      <div class="flex flex-wrap justify-center gap-6 items-center">
+        <a class="text-slate-500 hover:text-red-800 transition-colors underline decoration-amber-400 underline-offset-4" href="#">Confidentialité</a>
+        <a class="text-slate-500 hover:text-red-800 transition-colors underline decoration-amber-400 underline-offset-4" href="#">Conditions d'utilisation</a>
+        <a class="text-slate-500 hover:text-red-800 transition-colors underline decoration-amber-400 underline-offset-4" href="#">Contactez-nous</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
 </body>
 </html>

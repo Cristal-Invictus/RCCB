@@ -1,54 +1,219 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html class="light" lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RCCB - Admin</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <title>RCCB Administration - Spirit & Fire</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'primary-container': '#b22222',
+            tertiary: '#752e2b',
+            'surface-container-highest': '#e5e2e1',
+            error: '#ba1a1a',
+            'on-surface-variant': '#5a403e',
+            'secondary-container': '#fcd400',
+            primary: '#8f000d',
+            'surface-bright': '#fcf9f8',
+            'surface-container-lowest': '#ffffff',
+            'on-secondary-container': '#6e5c00',
+            'on-background': '#1c1b1b',
+            'outline-variant': '#e2beba',
+            'surface-container-high': '#eae7e7',
+            'surface-container-low': '#f6f3f2',
+            outline: '#8e706d',
+            surface: '#fcf9f8',
+            'secondary-fixed': '#ffe16d',
+            'on-surface': '#1c1b1b',
+            'surface-container': '#f0eded',
+            secondary: '#705d00',
+            'primary-fixed': '#ffdad6',
+            'on-primary': '#ffffff',
+            background: '#fcf9f8',
+            'surface-variant': '#e5e2e1'
+          },
+          borderRadius: {
+            DEFAULT: '0.25rem',
+            lg: '0.5rem',
+            xl: '0.75rem',
+            full: '9999px'
+          },
+          spacing: {
+            base: '4px',
+            md: '24px',
+            gutter: '24px',
+            xs: '8px',
+            sm: '16px',
+            xl: '64px',
+            lg: '40px'
+          },
+          fontFamily: {
+            manrope: ['Manrope', 'sans-serif'],
+            body: ['Manrope', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+    }
+
+    .admin-detail-card .k {
+      display: block;
+      color: #8e706d;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .admin-detail-card .v {
+      display: block;
+      color: #1c1b1b;
+      margin-top: 0.25rem;
+      overflow-wrap: anywhere;
+    }
+  </style>
 </head>
-<body>
-  <header>
-  <h1>Admin – Liste de présence</h1>
-  <p>Dashboard des présences (filtrable par date)</p>
+<body class="bg-background text-on-background min-h-screen">
+  <aside class="hidden lg:flex flex-col h-full fixed left-0 top-0 z-50 py-6 bg-white border-r border-gray-100 w-64 shadow-[4px_0_20px_rgba(178,34,34,0.04)]">
+    <div class="px-6 mb-10">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center text-white">
+          <span class="material-symbols-outlined">local_fire_department</span>
+        </div>
+        <div>
+          <h1 class="text-xl font-extrabold text-red-800 uppercase tracking-tighter">RCCB Admin</h1>
+          <p class="text-xs font-medium text-gray-400 tracking-widest uppercase">Spirit & Fire</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-4 space-y-2">
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-red-800 font-bold border-r-4 border-yellow-500 bg-red-50 active:scale-95" href="/admin">
+        <span class="material-symbols-outlined">dashboard</span>
+        <span class="text-sm font-medium tracking-wide">Dashboard</span>
+      </a>
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-500 hover:text-red-700 hover:bg-gray-50 transition-colors active:scale-95" href="#participants">
+        <span class="material-symbols-outlined">group</span>
+        <span class="text-sm font-medium tracking-wide">Participants</span>
+      </a>
+    </nav>
+
+    <div class="px-4 mt-auto">
+      <button id="logoutBtn" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-500 hover:text-red-700 hover:bg-gray-50 transition-colors active:scale-95" type="button">
+        <span class="material-symbols-outlined">logout</span>
+        <span class="text-sm font-medium tracking-wide">Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <header class="fixed top-0 right-0 left-0 lg:left-64 h-16 flex justify-between items-center px-4 md:px-8 z-40 bg-white/90 backdrop-blur-md border-b-2 border-yellow-500/20 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="lg:hidden w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-white">
+        <span class="material-symbols-outlined">local_fire_department</span>
+      </div>
+      <h2 class="text-base md:text-lg font-black text-red-800">RCCB Administration</h2>
+    </div>
+    <div class="flex items-center gap-3 md:gap-6">
+      <div class="relative hidden md:block">
+        <input id="search" class="w-56 lg:w-64 bg-surface-container-low border-none rounded-full px-4 py-2 pr-10 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none placeholder-gray-400" placeholder="Rechercher..." type="text" />
+        <span class="material-symbols-outlined absolute right-3 top-2 text-gray-400 text-sm">search</span>
+      </div>
+      <button class="hover:text-red-700 transition-colors text-gray-600" type="button" aria-label="Notifications">
+        <span class="material-symbols-outlined">notifications</span>
+      </button>
+      <a class="hover:text-red-700 transition-colors text-gray-600 border-2 border-yellow-500/30 rounded-full p-0.5" href="/" aria-label="Retour au site">
+        <span class="material-symbols-outlined">home</span>
+      </a>
+    </div>
   </header>
 
-  <main class="grid" style="grid-template-columns:1fr;">
-    <section class="card">
-      <div class="toolbar">
-        <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
-          <label class="hint" style="display:flex; align-items:center; gap:.5rem;">
-            Date:
-            <input id="presenceDate" type="date" />
-          </label>
-          <a id="downloadCsv" class="btnLink" href="/api/inscriptions.csv" download>⬇ Télécharger (CSV)</a>
-          <button id="logoutBtn" class="btnLink" type="button" style="background:#334155;">Déconnexion</button>
+  <main class="lg:ml-64 pt-24 px-4 md:px-8 pb-12">
+    <header class="mb-12">
+      <h1 class="text-4xl md:text-5xl leading-tight font-extrabold text-primary mb-2">Tableau de bord</h1>
+      <p class="text-lg text-outline italic border-l-4 border-secondary-container pl-4">
+        « Que le feu de l'Esprit Saint embrase vos cœurs »
+      </p>
+    </header>
+
+    <section id="stats" class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-xl"></section>
+
+    <section id="participants" class="bg-white rounded-xl shadow-[0_20px_20px_rgba(143,0,13,0.04)] overflow-hidden border border-surface-container-highest">
+      <div class="p-lg flex flex-col xl:flex-row justify-between items-start xl:items-center gap-md border-b border-surface-container">
+        <div>
+          <h3 class="text-2xl md:text-3xl leading-tight font-bold text-on-surface">Liste des inscriptions</h3>
+          <p id="adminHint" class="text-base text-outline">Gérez les participants inscrits à la communauté.</p>
         </div>
-        <span class="hint" id="adminHint">Mode admin</span>
+        <div class="flex flex-col md:flex-row gap-sm w-full xl:w-auto">
+          <div class="relative md:hidden">
+            <input id="searchMobile" class="w-full bg-surface-container-low border-none rounded-lg px-4 py-3 pr-10 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none placeholder-gray-400" placeholder="Rechercher..." type="text" />
+            <span class="material-symbols-outlined absolute right-3 top-3 text-gray-400 text-sm">search</span>
+          </div>
+          <label class="flex items-center gap-2 px-md py-xs bg-surface-container-low rounded-lg text-sm font-semibold text-outline">
+            <span class="material-symbols-outlined text-base">calendar_month</span>
+            <input id="presenceDate" class="bg-transparent border-0 p-0 text-sm focus:ring-0" type="date" />
+          </label>
+          <a id="downloadCsv" class="flex items-center justify-center gap-2 px-md py-xs bg-primary text-white rounded-lg font-semibold hover:bg-primary-container transition-all shadow-lg shadow-primary/20 active:scale-95" href="/api/inscriptions.csv" download>
+            <span class="material-symbols-outlined">download</span>
+            Exporter CSV
+          </a>
+          <button class="lg:hidden flex items-center justify-center gap-2 px-md py-xs border-2 border-primary text-primary rounded-lg font-semibold hover:bg-red-50 transition-all active:scale-95" type="button" id="logoutBtnMobile">
+            <span class="material-symbols-outlined">logout</span>
+            Déconnexion
+          </button>
+        </div>
       </div>
 
-      <div class="stats" id="stats"></div>
-      <input id="search" placeholder="Recherche..." />
+      <div id="details" class="hidden border-b border-surface-container bg-surface-container-low p-lg"></div>
 
-  <div id="details" class="details" style="display:none"></div>
-
-      <div class="tableWrap">
-        <table>
-          <thead>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-surface-container-low border-b border-surface-container-highest">
             <tr>
-              <th>Date</th>
-              <th>Nom</th>
-              <th>Date de naissance</th>
-              <th>Sexe</th>
-              <th>Situation</th>
-              <th>Profession</th>
-              <th>Vicariat</th>
-              <th>Paroisse</th>
-              <th>Téléphone</th>
-              <th>Photo</th>
+              <th class="px-md py-sm text-sm font-semibold uppercase tracking-wider text-outline">Photo</th>
+              <th class="px-md py-sm text-sm font-semibold uppercase tracking-wider text-outline">Nom & Prénom</th>
+              <th class="px-md py-sm text-sm font-semibold uppercase tracking-wider text-outline">Sexe</th>
+              <th class="px-md py-sm text-sm font-semibold uppercase tracking-wider text-outline">Situation</th>
+              <th class="px-md py-sm text-sm font-semibold uppercase tracking-wider text-outline">Paroisse</th>
+              <th class="px-md py-sm text-sm font-semibold uppercase tracking-wider text-outline">Date</th>
+              <th class="px-md py-sm text-sm font-semibold uppercase tracking-wider text-outline text-right">Actions</th>
             </tr>
           </thead>
-          <tbody id="rows"></tbody>
+          <tbody id="rows" class="divide-y divide-surface-container"></tbody>
         </table>
+      </div>
+
+      <div class="px-lg py-md border-t border-surface-container flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-surface-container-low">
+        <p id="tableSummary" class="text-sm text-outline">Chargement des participants...</p>
+        <div class="flex gap-2">
+          <button class="w-8 h-8 flex items-center justify-center rounded bg-primary text-white font-bold text-sm" type="button">1</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-xl max-w-2xl">
+      <div class="bg-white border-l-[6px] border-secondary-container rounded-xl p-lg shadow-sm">
+        <div class="text-secondary mb-2">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+        </div>
+        <p class="text-lg italic text-on-surface-variant leading-relaxed">
+          "Car là où deux ou trois sont assemblés en mon nom, je suis au milieu d'eux."
+        </p>
+        <p class="text-sm font-semibold text-secondary mt-4 uppercase tracking-widest">Matthieu 18:20</p>
       </div>
     </section>
   </main>

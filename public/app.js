@@ -237,9 +237,9 @@ function initPhotoUpload() {
     setFlash('');
     const file = input.files && input.files[0];
     if (!file) return;
-    if (file.size > 800 * 1024) {
+    if (file.size > 2 * 1024 * 1024) {
       input.value = '';
-      setFlash('Photo trop lourde (max ~800KB).', 'error');
+      setFlash('Photo trop lourde (max 2Mo).', 'error');
       return;
     }
     try {
@@ -373,8 +373,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const placeholder = $('.photo-placeholder');
     if (placeholder) {
       placeholder.innerHTML = `
-        <i class="fa-solid fa-camera"></i>
-        <span>PHOTO (UPLOAD)</span>
+        <span class="material-symbols-outlined text-outline text-5xl mb-2">add_a_photo</span>
+        <span class="text-xs font-semibold text-outline-variant uppercase tracking-widest">Photo (Upload)</span>
       `;
     }
   });
@@ -407,84 +407,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-    const photoPlaceholder = document.querySelector('.photo-placeholder');
-    const photoInput = document.getElementById('photo');
-    if (photoPlaceholder && photoInput) {
-        photoPlaceholder.addEventListener('click', () => {
-            photoInput.click();
-        });
-
-        photoInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    photoPlaceholder.innerHTML = `<img src="${e.target.result}" alt="Photo preview" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-
-    // Populate Vicariat dropdown
-    const vicariatSelect = document.getElementById('vicariat');
-    if (vicariatSelect) {
-        const vicariats = [
-            "Cotonou", "Calavi", "Porto-Novo", "Lokossa", "Dassa",
-            "Abomey", "Parakou", "N'Dali", "Djougou", "Natitingou", "Kandi"
-        ];
-        vicariats.forEach(vicariat => {
-            const option = document.createElement('option');
-            option.value = vicariat.toLowerCase().replace(' ', '-');
-            option.textContent = vicariat;
-            vicariatSelect.appendChild(option);
-        });
-    }
-
-    // Form submission
-    const form = document.getElementById('registration-form');
-    if (form) {
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-
-            // Handle file separately
-            const photoFile = photoInput.files[0];
-            if (photoFile) {
-                // You would typically upload the file to your server here
-                // For this example, we'll just log its name.
-                data.photo = photoFile.name;
-            }
-
-            console.log('Form data submitted:', data);
-
-            try {
-                const response = await fetch('/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data),
-                });
-
-                if (response.ok) {
-                    alert('Enregistrement réussi !');
-                    form.reset();
-                    // Reset photo preview
-                    photoPlaceholder.innerHTML = `
-                        <i class="fa-solid fa-camera"></i>
-                        <span>PHOTO (UPLOAD)</span>`;
-                } else {
-                    const error = await response.json();
-                    alert(`Erreur: ${error.message}`);
-                }
-            } catch (error) {
-                console.error('Erreur lors de la soumission du formulaire:', error);
-                alert('Une erreur est survenue. Veuillez réessayer.');
-            }
-        });
-    }
 
 // (Dark-mode styles are handled in CSS; keep JS minimal.)

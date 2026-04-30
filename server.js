@@ -265,8 +265,8 @@ app.post('/api/inscriptions', async (req, res) => {
       if (!isDataUrl) {
         return res.status(400).json({ error: 'Photo invalide (format)'});
       }
-      // limite ~1.2MB en string (approximatif)
-      if (photo.length > 1_200_000) {
+      // Accepte une image jusqu'a environ 2Mo avant encodage base64.
+      if (photo.length > 3_000_000) {
         return res.status(400).json({ error: 'Photo trop lourde' });
       }
     } else {

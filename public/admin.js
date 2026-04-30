@@ -1,11 +1,14 @@
 const stats = document.getElementById('stats');
 const rows = document.getElementById('rows');
 const searchInput = document.getElementById('search');
+const searchMobileInput = document.getElementById('searchMobile');
 const adminHint = document.getElementById('adminHint');
 const logoutBtn = document.getElementById('logoutBtn');
+const logoutBtnMobile = document.getElementById('logoutBtnMobile');
 const details = document.getElementById('details');
 const presenceDateInput = document.getElementById('presenceDate');
 const downloadCsv = document.getElementById('downloadCsv');
+const tableSummary = document.getElementById('tableSummary');
 
 let inscriptions = [];
 
@@ -31,40 +34,42 @@ function escapeHtml(s) {
 function showDetails(x) {
   if (!details) return;
   if (!x) {
-    details.style.display = 'none';
+    details.classList.add('hidden');
     details.innerHTML = '';
     return;
   }
 
-  const photo = x.photo ? `<img class="avatar" src="${escapeHtml(x.photo)}" alt="photo" />` : '<div class="avatar avatarEmpty">Aucune</div>';
+  const photo = x.photo
+    ? `<img class="w-full max-w-[180px] aspect-square rounded-xl object-cover border-4 border-white shadow-sm" src="${escapeHtml(x.photo)}" alt="photo" />`
+    : '<div class="w-full max-w-[180px] aspect-square rounded-xl bg-white border border-surface-container-highest flex items-center justify-center text-outline text-sm">Aucune photo</div>';
   details.innerHTML = `
-    <div class="detailsHead">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
       <div>
-        <strong>${escapeHtml(x.nom)} ${escapeHtml(x.prenom)}</strong>
-  <div class="hint">Enregistré le ${escapeHtml(new Date(x.created_at).toLocaleString())}</div>
+        <strong class="text-2xl text-primary">${escapeHtml(x.nom)} ${escapeHtml(x.prenom)}</strong>
+        <div class="text-sm text-outline">Enregistré le ${escapeHtml(new Date(x.created_at).toLocaleString())}</div>
       </div>
-      <button id="closeDetails" class="btnSmall" type="button">Fermer</button>
+      <button id="closeDetails" class="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-primary text-primary font-semibold hover:bg-red-50" type="button">Fermer</button>
     </div>
-    <div class="detailsGrid">
-      <div class="detailsCard">${photo}</div>
-      <div class="detailsCard">
-  <div><span class="k">Date de présence</span><span class="v">${escapeHtml(asYmd(x.presence_date || ''))}</span></div>
-  <div><span class="k">Date de naissance</span><span class="v">${escapeHtml(asYmd(x.date_naissance || ''))}</span></div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="admin-detail-card bg-white rounded-xl p-4">${photo}</div>
+      <div class="admin-detail-card bg-white rounded-xl p-4 space-y-4">
+        <div><span class="k">Date de présence</span><span class="v">${escapeHtml(asYmd(x.presence_date || ''))}</span></div>
+        <div><span class="k">Date de naissance</span><span class="v">${escapeHtml(asYmd(x.date_naissance || ''))}</span></div>
         <div><span class="k">Sexe</span><span class="v">${escapeHtml(x.sexe)}</span></div>
-  <div><span class="k">Situation relationnelle</span><span class="v">${escapeHtml(x.situation_relationnelle || '')}</span></div>
+        <div><span class="k">Situation relationnelle</span><span class="v">${escapeHtml(x.situation_relationnelle || '')}</span></div>
         <div><span class="k">Profession</span><span class="v">${escapeHtml(x.profession || '')}</span></div>
       </div>
-      <div class="detailsCard">
+      <div class="admin-detail-card bg-white rounded-xl p-4 space-y-4">
         <div><span class="k">Vicariat</span><span class="v">${escapeHtml(x.vicariat)}</span></div>
         <div><span class="k">Paroisse</span><span class="v">${escapeHtml(x.paroisse)}</span></div>
         <div><span class="k">Téléphone</span><span class="v">${escapeHtml(x.telephone || '')}</span></div>
       </div>
-      <div class="detailsCard" style="grid-column:1/-1;">
+      <div class="admin-detail-card bg-white rounded-xl p-4 md:col-span-3">
         <div><span class="k">Commentaires</span><span class="v">${escapeHtml(x.commentaires || '')}</span></div>
       </div>
     </div>
   `;
-  details.style.display = 'block';
+  details.classList.remove('hidden');
   details.querySelector('#closeDetails')?.addEventListener('click', () => showDetails(null));
   details.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -75,22 +80,70 @@ function render(list) {
   const men = list.filter((x) => ['masculin', 'homme', 'm'].includes(normSex(x.sexe))).length;
   const women = list.filter((x) => ['féminin', 'feminin', 'femme', 'f'].includes(normSex(x.sexe))).length;
 
-  stats.innerHTML = `<div class="stat"><b>${total}</b><br>Total</div><div class="stat"><b>${men}</b><br>Hommes</div><div class="stat"><b>${women}</b><br>Femmes</div>`;
+  if (stats) {
+    stats.innerHTML = `
+      <div class="bg-white p-lg rounded-xl shadow-[0_20px_20px_rgba(143,0,13,0.04)] border-t-2 border-secondary-container relative overflow-hidden group">
+        <div class="absolute -right-4 -top-4 text-red-50 group-hover:text-red-100 transition-colors">
+          <span class="material-symbols-outlined text-[120px] opacity-20">person_add</span>
+        </div>
+        <p class="text-sm font-semibold uppercase tracking-wider text-outline mb-2">Total inscrits</p>
+        <div class="flex items-end gap-2">
+          <h3 class="text-5xl font-extrabold text-primary">${total}</h3>
+        </div>
+      </div>
+      <div class="bg-white p-lg rounded-xl shadow-[0_20px_20px_rgba(143,0,13,0.04)] border-t-2 border-secondary-container relative overflow-hidden group">
+        <div class="absolute -right-4 -top-4 text-red-50 group-hover:text-red-100 transition-colors">
+          <span class="material-symbols-outlined text-[120px] opacity-20">man</span>
+        </div>
+        <p class="text-sm font-semibold uppercase tracking-wider text-outline mb-2">Hommes</p>
+        <div class="flex items-end gap-2">
+          <h3 class="text-5xl font-extrabold text-primary">${men}</h3>
+        </div>
+      </div>
+      <div class="bg-white p-lg rounded-xl shadow-[0_20px_20px_rgba(143,0,13,0.04)] border-t-2 border-secondary-container relative overflow-hidden group">
+        <div class="absolute -right-4 -top-4 text-red-50 group-hover:text-red-100 transition-colors">
+          <span class="material-symbols-outlined text-[120px] opacity-20">woman</span>
+        </div>
+        <p class="text-sm font-semibold uppercase tracking-wider text-outline mb-2">Femmes</p>
+        <div class="flex items-end gap-2">
+          <h3 class="text-5xl font-extrabold text-primary">${women}</h3>
+        </div>
+      </div>
+    `;
+  }
+
+  if (tableSummary) {
+    tableSummary.textContent = list.length
+      ? `Affichage de ${list.length} participant${list.length > 1 ? 's' : ''}`
+      : 'Aucun participant à afficher';
+  }
+
   rows.innerHTML = list
     .map(
-      (x) =>
-        `<tr class="clickRow" data-id="${x.id}">
-          <td>${escapeHtml(asYmd(x.presence_date || ''))}</td>
-          <td><strong>${escapeHtml(x.nom)} ${escapeHtml(x.prenom)}</strong></td>
-          <td>${escapeHtml(asYmd(x.date_naissance || ''))}</td>
-          <td>${escapeHtml(x.sexe)}</td>
-          <td>${escapeHtml(x.situation_relationnelle || '')}</td>
-          <td>${escapeHtml(x.profession || '')}</td>
-          <td>${escapeHtml(x.vicariat)}</td>
-          <td>${escapeHtml(x.paroisse)}</td>
-          <td>${escapeHtml(x.telephone || '')}</td>
-          <td>${x.photo ? '<span class="pill">Voir</span>' : ''}</td>
+      (x) => {
+        const initials = `${String(x.nom || '').charAt(0)}${String(x.prenom || '').charAt(0)}`.toUpperCase();
+        const photo = x.photo
+          ? `<img alt="Photo de ${escapeHtml(x.nom)} ${escapeHtml(x.prenom)}" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" src="${escapeHtml(x.photo)}" />`
+          : `<div class="w-10 h-10 rounded-full bg-primary-fixed text-primary flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm">${escapeHtml(initials || 'R')}</div>`;
+        return `<tr class="clickRow hover:bg-red-50/30 transition-colors group cursor-pointer" data-id="${x.id}">
+          <td class="px-md py-sm">${photo}</td>
+          <td class="px-md py-sm">
+            <p class="font-bold text-on-surface">${escapeHtml(x.nom)} ${escapeHtml(x.prenom)}</p>
+            <p class="text-xs text-outline">${escapeHtml(x.telephone || '')}</p>
+          </td>
+          <td class="px-md py-sm text-outline">${escapeHtml(x.sexe)}</td>
+          <td class="px-md py-sm">
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">${escapeHtml(x.situation_relationnelle || 'Inscrit')}</span>
+          </td>
+          <td class="px-md py-sm text-on-surface-variant">${escapeHtml(x.paroisse)}</td>
+          <td class="px-md py-sm text-outline">${escapeHtml(asYmd(x.presence_date || ''))}</td>
+          <td class="px-md py-sm text-right">
+            <button class="text-outline hover:text-primary transition-colors" type="button" aria-label="Voir les détails">
+              <span class="material-symbols-outlined">more_vert</span>
+            </button>
+          </td>
         </tr>`
+      }
     )
     .join('');
 
@@ -105,7 +158,7 @@ function render(list) {
 }
 
 function applySearch() {
-  const q = (searchInput.value || '').trim().toLowerCase();
+  const q = ((searchInput && searchInput.value) || (searchMobileInput && searchMobileInput.value) || '').trim().toLowerCase();
   const filtered = inscriptions.filter((x) =>
   [x.presence_date, x.nom, x.prenom, x.vicariat, x.paroisse, x.profession, x.telephone, x.situation_relationnelle]
       .join(' ')
@@ -136,8 +189,11 @@ async function fetchInscriptions() {
       downloadCsv.href = d ? `/api/inscriptions.csv?date=${encodeURIComponent(d)}` : '/api/inscriptions.csv';
     }
   } catch (err) {
-    stats.innerHTML = '<div class="stat" style="grid-column:1/-1; border-color:#fecaca; background:#fff1f2;">Impossible de charger les inscriptions.</div>';
+    if (stats) {
+      stats.innerHTML = '<div class="md:col-span-3 bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 font-semibold">Impossible de charger les inscriptions.</div>';
+    }
     rows.innerHTML = '';
+    if (tableSummary) tableSummary.textContent = 'Chargement impossible';
     if (adminHint) {
       adminHint.textContent = `Erreur API: ${String(err && err.message ? err.message : err)}`;
       adminHint.style.color = 'crimson';
@@ -145,19 +201,30 @@ async function fetchInscriptions() {
   }
 }
 
-searchInput.addEventListener('input', applySearch);
+searchInput?.addEventListener('input', () => {
+  if (searchMobileInput) searchMobileInput.value = searchInput.value;
+  applySearch();
+});
+
+searchMobileInput?.addEventListener('input', () => {
+  if (searchInput) searchInput.value = searchMobileInput.value;
+  applySearch();
+});
 
 presenceDateInput?.addEventListener('change', () => {
   showDetails(null);
   fetchInscriptions();
 });
 
-logoutBtn?.addEventListener('click', async () => {
+async function logout() {
   try {
     await fetch('/api/admin/logout', { method: 'POST' });
   } finally {
     location.href = '/admin/login';
   }
-});
+}
+
+logoutBtn?.addEventListener('click', logout);
+logoutBtnMobile?.addEventListener('click', logout);
 
 fetchInscriptions();
