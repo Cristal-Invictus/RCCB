@@ -7,69 +7,131 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <header>
-    <h1>Plateforme d’enregistrement des participants (Liste de présence)</h1>
-    <p>Choisissez une date, puis enregistrez les participants présents. Les responsables pourront consulter et exporter la liste via l’espace admin.</p>
-  <p><a href="/admin/login" style="color:#e0f2fe; text-decoration:underline;">Accès admin</a></p>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="brand">
+        <div class="brand__mark" aria-hidden="true">RCCB</div>
+        <div class="brand__text">
+          <div class="brand__title">Liste de présence</div>
+          <div class="brand__subtitle">Renouveau Charismatique Catholique du Bénin</div>
+        </div>
+      </div>
+      <nav class="topbar__nav">
+        <a class="navLink" href="/admin/login">Espace admin</a>
+      </nav>
+    </div>
   </header>
 
-  <main class="grid" style="grid-template-columns:1fr; max-width:980px; margin:0 auto;">
-    <section class="card">
-      <h2>Enregistrer une présence</h2>
-      <form id="inscriptionForm">
-        <div class="row">
-          <label>Date de présence<input type="date" name="presence_date" required /></label>
-          <label>&nbsp;<input disabled style="visibility:hidden" /></label>
+  <main class="page">
+    <section class="hero">
+      <div class="hero__inner">
+        <h1>Formulaire de présence</h1>
+        <p>Choisissez la date de rencontre et enregistrez les participants présents.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__head">
+        <h2>Nouvel enregistrement</h2>
+        <div class="hint">Les champs marqués d’un astérisque (*) sont obligatoires.</div>
+      </div>
+
+      <form id="inscriptionForm" class="formGrid">
+        <div class="cardSection">
+          <div class="sectionTitle">Informations personnelles</div>
+
+          <div class="fields">
+            <label class="field">
+              <span class="field__label">Date de présence *</span>
+              <input class="field__control" type="date" name="presence_date" required />
+            </label>
+
+            <div class="fieldRow">
+              <label class="field">
+                <span class="field__label">Nom *</span>
+                <input class="field__control" name="nom" autocomplete="family-name" required />
+              </label>
+              <label class="field">
+                <span class="field__label">Prénom *</span>
+                <input class="field__control" name="prenom" autocomplete="given-name" required />
+              </label>
+            </div>
+
+            <div class="fieldRow">
+              <label class="field">
+                <span class="field__label">Date de naissance *</span>
+                <input class="field__control" type="date" name="date_naissance" required />
+              </label>
+              <label class="field">
+                <span class="field__label">Sexe *</span>
+                <select class="field__control" name="sexe" required>
+                  <option value="">Choisir</option>
+                  <option>Masculin</option>
+                  <option>Féminin</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="fieldRow">
+              <label class="field">
+                <span class="field__label">Profession</span>
+                <input class="field__control" name="profession" autocomplete="organization-title" />
+              </label>
+              <label class="field">
+                <span class="field__label">Téléphone (01XXXXXXXX)</span>
+                <input class="field__control" name="telephone" inputmode="numeric" placeholder="01XXXXXXXX" />
+              </label>
+            </div>
+
+            <label class="field">
+              <span class="field__label">Situation relationnelle</span>
+              <select class="field__control" name="situation_relationnelle">
+                <option value="">Choisir</option>
+                <option value="Célibataire">Célibataire</option>
+                <option value="Libre">Libre</option>
+                <option value="Engagé(e)">Engagé(e)</option>
+                <option value="En couple">En couple</option>
+                <option value="Marié(e)">Marié(e)</option>
+                <option value="Divorcé(e)">Divorcé(e)</option>
+                <option value="Veuf/Veuve">Veuf/Veuve</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span class="field__label">Photo (optionnel)</span>
+              <input class="field__control" type="file" name="photo" accept="image/*" />
+              <span class="field__hint">Taille conseillée &lt; 800KB.</span>
+            </label>
+          </div>
         </div>
-        <div class="row">
-          <label>Nom<input name="nom" required /></label>
-          <label>Prénom<input name="prenom" required /></label>
+
+        <div class="cardSection">
+          <div class="sectionTitle">Détails institutionnels</div>
+
+          <div class="fields">
+            <div class="fieldRow">
+              <label class="field">
+                <span class="field__label">Vicariat *</span>
+                <select class="field__control" name="vicariat" id="vicariat" required></select>
+              </label>
+              <label class="field">
+                <span class="field__label">Paroisse *</span>
+                <select class="field__control" name="paroisse" id="paroisse" required></select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span class="field__label">Commentaires</span>
+              <textarea class="field__control" name="commentaires" rows="3" placeholder="Informations complémentaires..."></textarea>
+            </label>
+          </div>
         </div>
-        <div class="row">
-          <label>Date de naissance<input type="date" name="date_naissance" required /></label>
-          <label>Sexe
-            <select name="sexe" required>
-              <option value="">Choisir</option>
-              <option>Masculin</option>
-              <option>Féminin</option>
-            </select>
-          </label>
+
+        <div class="formActions">
+          <button type="submit" class="btnPrimary">Enregistrer</button>
+          <p id="flash" class="flash" role="status" aria-live="polite"></p>
         </div>
-        <div class="row">
-          <label>Profession<input name="profession" /></label>
-          <label>Téléphone<input name="telephone" /></label>
-        </div>
-        <div class="row">
-          <label>Photo
-            <input type="file" name="photo" accept="image/*" />
-          </label>
-          <label>&nbsp;<input disabled style="visibility:hidden" /></label>
-        </div>
-        <div class="row">
-          <label>Situation relationnelle
-            <select name="situation_relationnelle">
-              <option value="">Choisir</option>
-              <option value="Célibataire">Célibataire</option>
-              <option value="Libre">Libre</option>
-              <option value="Engagé(e)">Engagé(e)</option>
-              <option value="En couple">En couple</option>
-              <option value="Marié(e)">Marié(e)</option>
-              <option value="Divorcé(e)">Divorcé(e)</option>
-              <option value="Veuf/Veuve">Veuf/Veuve</option>
-            </select>
-          </label>
-          <label>&nbsp;
-            <input disabled style="visibility:hidden" />
-          </label>
-        </div>
-        <div class="row">
-          <label>Vicariat<select name="vicariat" id="vicariat" required></select></label>
-          <label>Paroisse<select name="paroisse" id="paroisse" required></select></label>
-        </div>
-        <label>Commentaires<textarea name="commentaires" rows="3"></textarea></label>
-  <button type="submit">Enregistrer</button>
       </form>
-      <p id="flash"></p>
     </section>
   </main>
 
