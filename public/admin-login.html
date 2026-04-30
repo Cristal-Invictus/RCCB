@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RCCB - Admin Login</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>RCCB Admin</h1>
+    <p>Connexion</p>
+  </header>
+
+  <main class="grid" style="grid-template-columns:1fr; max-width:720px; margin:0 auto;">
+    <section class="card">
+      <h2>Se connecter</h2>
+      <p class="hint">Entre le mot de passe admin. (En production, configure <code>ADMIN_TOKEN</code>.)</p>
+      <form id="loginForm">
+        <label>Mot de passe
+          <input name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <button type="submit">Connexion</button>
+      </form>
+      <p id="flash"></p>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const flash = document.getElementById('flash');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      flash.textContent = '';
+
+      const password = new FormData(form).get('password');
+      try {
+        const r = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+
+        if (!r.ok) {
+          let msg = `Erreur (HTTP ${r.status})`;
+          try {
+            const data = await r.json();
+            msg = data.error || msg;
+          } catch {
+            // ignore
+          }
+          flash.textContent = msg;
+          flash.style.color = 'crimson';
+          return;
+        }
+
+        location.href = '/admin';
+      } catch (err) {
+        flash.textContent = `Erreur réseau: ${String(err && err.message ? err.message : err)}`;
+        flash.style.color = 'crimson';
+      }
+    });
+  </script>
+</body>
+</html>
