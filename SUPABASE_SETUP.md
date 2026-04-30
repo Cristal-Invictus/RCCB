@@ -38,3 +38,6 @@ Puis **Manual Deploy > Clear build cache & deploy**.
 
 ## 5) Important
 Le backend actuel utilise la clé service role uniquement côté serveur (Render), ce qui évite d'exposer les secrets au navigateur.
+
+
+⚠️ Ne laisse jamais `https://<project-ref>.supabase.co` tel quel. Copie la valeur réelle depuis Supabase > Settings > API > Project URL.
