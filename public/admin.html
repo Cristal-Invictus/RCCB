@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RCCB - Admin</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>RCCB Admin</h1>
+    <p>Dashboard des inscriptions</p>
+  </header>
+
+  <main class="grid" style="grid-template-columns:1fr;">
+    <section class="card">
+      <div class="toolbar">
+        <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+          <a id="downloadCsv" class="btnLink" href="/api/inscriptions.csv" download>⬇ Télécharger (CSV)</a>
+          <button id="logoutBtn" class="btnLink" type="button" style="background:#334155;">Déconnexion</button>
+        </div>
+        <span class="hint" id="adminHint">Mode admin</span>
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <input id="search" placeholder="Recherche..." />
+
+  <div id="details" class="details" style="display:none"></div>
+
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Nom</th>
+              <th>Âge</th>
+              <th>Sexe</th>
+              <th>Statut</th>
+              <th>Profession</th>
+              <th>Vicariat</th>
+              <th>Paroisse</th>
+              <th>Contact</th>
+              <th>Photo</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/admin.js"></script>
+</body>
+</html>
