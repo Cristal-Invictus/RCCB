@@ -294,3 +294,145 @@ const presenceDateInput = form?.querySelector('input[name="presence_date"]');
 if (presenceDateInput && !presenceDateInput.value) {
   presenceDateInput.value = todayYmd();
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Theme toggle functionality
+    const themeToggle = document.querySelector('.theme-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            // You can save the theme preference in localStorage
+            if (document.body.classList.contains('dark-mode')) {
+                localStorage.setItem('theme', 'dark-mode');
+            } else {
+                localStorage.removeItem('theme');
+            }
+        });
+    }
+
+    // Apply saved theme
+    if (localStorage.getItem('theme') === 'dark-mode') {
+        document.body.classList.add('dark-mode');
+    }
+
+    // Photo upload functionality
+    const photoPlaceholder = document.querySelector('.photo-placeholder');
+    const photoInput = document.getElementById('photo');
+    if (photoPlaceholder && photoInput) {
+        photoPlaceholder.addEventListener('click', () => {
+            photoInput.click();
+        });
+
+        photoInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    photoPlaceholder.innerHTML = `<img src="${e.target.result}" alt="Photo preview" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Populate Vicariat dropdown
+    const vicariatSelect = document.getElementById('vicariat');
+    if (vicariatSelect) {
+        const vicariats = [
+            "Cotonou", "Calavi", "Porto-Novo", "Lokossa", "Dassa",
+            "Abomey", "Parakou", "N'Dali", "Djougou", "Natitingou", "Kandi"
+        ];
+        vicariats.forEach(vicariat => {
+            const option = document.createElement('option');
+            option.value = vicariat.toLowerCase().replace(' ', '-');
+            option.textContent = vicariat;
+            vicariatSelect.appendChild(option);
+        });
+    }
+
+    // Form submission
+    const form = document.getElementById('registration-form');
+    if (form) {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            // Handle file separately
+            const photoFile = photoInput.files[0];
+            if (photoFile) {
+                // You would typically upload the file to your server here
+                // For this example, we'll just log its name.
+                data.photo = photoFile.name;
+            }
+
+            console.log('Form data submitted:', data);
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                if (response.ok) {
+                    alert('Enregistrement réussi !');
+                    form.reset();
+                    // Reset photo preview
+                    photoPlaceholder.innerHTML = `
+                        <i class="fa-solid fa-camera"></i>
+                        <span>PHOTO (UPLOAD)</span>`;
+                } else {
+                    const error = await response.json();
+                    alert(`Erreur: ${error.message}`);
+                }
+            } catch (error) {
+                console.error('Erreur lors de la soumission du formulaire:', error);
+                alert('Une erreur est survenue. Veuillez réessayer.');
+            }
+        });
+    }
+
+    // Add dark mode styles
+    const style = document.createElement('style');
+    style.innerHTML = `
+        body.dark-mode {
+            background-color: #1a1a1a;
+            color: #eee;
+        }
+        body.dark-mode header,
+        body.dark-mode footer,
+        body.dark-mode #registration-form {
+            background-color: #2c2c2c;
+            border-color: #444;
+        }
+        body.dark-mode .intro .quote {
+            background-color: #333;
+            border-color: #e8a800;
+        }
+        body.dark-mode input,
+        body.dark-mode select,
+        body.dark-mode textarea {
+            background-color: #333;
+            border-color: #555;
+            color: #eee;
+        }
+        body.dark-mode .phone-input span {
+            background-color: #444;
+            border-color: #555;
+        }
+        body.dark-mode .reset-btn {
+            background-color: #2c2c2c;
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+        body.dark-mode header .logo,
+        body.dark-mode .intro h1 {
+            color: #d35400;
+        }
+    `;
+    document.head.appendChild(style);
+});

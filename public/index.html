@@ -1,140 +1,151 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Liste de présence - RCCB</title>
-  <link rel="stylesheet" href="/styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plateforme d'enregistrement des participants</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar__inner">
-      <div class="brand">
-        <div class="brand__mark" aria-hidden="true">RCCB</div>
-        <div class="brand__text">
-          <div class="brand__title">Liste de présence</div>
-          <div class="brand__subtitle">Renouveau Charismatique Catholique du Bénin</div>
+    <header>
+        <div class="logo">RCC Benin</div>
+        <nav>
+            <a href="#" class="active">Enregistrement</a>
+            <a href="#">Accès Admin</a>
+            <a href="#">Support</a>
+        </nav>
+        <div class="icons">
+            <i class="fa-regular fa-bell"></i>
+            <i class="fa-regular fa-circle-question"></i>
         </div>
-      </div>
-      <nav class="topbar__nav">
-        <a class="navLink" href="/admin/login">Espace admin</a>
-      </nav>
-    </div>
-  </header>
+    </header>
 
-  <main class="page">
-    <section class="hero">
-      <div class="hero__inner">
-        <h1>Formulaire de présence</h1>
-        <p>Choisissez la date de rencontre et enregistrez les participants présents.</p>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel__head">
-        <h2>Nouvel enregistrement</h2>
-        <div class="hint">Les champs marqués d’un astérisque (*) sont obligatoires.</div>
-      </div>
-
-      <form id="inscriptionForm" class="formGrid">
-        <div class="cardSection">
-          <div class="sectionTitle">Informations personnelles</div>
-
-          <div class="fields">
-            <label class="field">
-              <span class="field__label">Date de présence *</span>
-              <input class="field__control" type="date" name="presence_date" required />
-            </label>
-
-            <div class="fieldRow">
-              <label class="field">
-                <span class="field__label">Nom *</span>
-                <input class="field__control" name="nom" autocomplete="family-name" required />
-              </label>
-              <label class="field">
-                <span class="field__label">Prénom *</span>
-                <input class="field__control" name="prenom" autocomplete="given-name" required />
-              </label>
+    <main>
+        <section class="intro">
+            <p class="mission">SACRÉE MISSION</p>
+            <h1>Plateforme d'enregistrement des participants</h1>
+            <p>Rejoignez la communion spirituelle du Renouveau Charismatique Catholique du Bénin. <br>Veuillez remplir le formulaire ci-dessous avec ferveur et exactitude.</p>
+            <div class="quote">
+                <p>"Car là où deux ou trois sont assemblés en mon nom, je suis au milieu d'eux."</p>
+                <p class="author">- Matthieu 18:20</p>
             </div>
+        </section>
 
-            <div class="fieldRow">
-              <label class="field">
-                <span class="field__label">Date de naissance *</span>
-                <input class="field__control" type="date" name="date_naissance" required />
-              </label>
-              <label class="field">
-                <span class="field__label">Sexe *</span>
-                <select class="field__control" name="sexe" required>
-                  <option value="">Choisir</option>
-                  <option>Masculin</option>
-                  <option>Féminin</option>
-                </select>
-              </label>
+        <form id="registration-form">
+            <section class="form-section">
+                <h2><i class="fa-solid fa-user"></i> INFORMATIONS PERSONNELLES</h2>
+                <div class="form-grid">
+                    <div class="form-group photo-upload">
+                        <div class="photo-placeholder">
+                            <i class="fa-solid fa-camera"></i>
+                            <span>PHOTO (UPLOAD)</span>
+                        </div>
+                        <small>Format JPG ou PNG max 2Mo</small>
+                        <input type="file" id="photo" name="photo" accept="image/jpeg, image/png" style="display: none;">
+                    </div>
+                    <div class="form-group-span-2">
+                        <div class="form-group">
+                            <label for="presence-date">DATE DE PRÉSENCE</label>
+                            <input type="date" id="presence-date" name="presence-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="sex">SEXE</label>
+                            <select id="sex" name="sex">
+                                <option value="">Sélectionner</option>
+                                <option value="homme">Homme</option>
+                                <option value="femme">Femme</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="last-name">NOM</label>
+                            <input type="text" id="last-name" name="last-name" placeholder="Entrez votre nom">
+                        </div>
+                        <div class="form-group">
+                            <label for="first-name">PRÉNOM</label>
+                            <input type="text" id="first-name" name="first-name" placeholder="Entrez votre prénom">
+                        </div>
+                        <div class="form-group">
+                            <label for="birth-date">DATE DE NAISSANCE</label>
+                            <input type="date" id="birth-date" name="birth-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="relationship-status">SITUATION RELATIONNELLE</label>
+                            <select id="relationship-status" name="relationship-status">
+                                <option value="">Sélectionner</option>
+                                <option value="celibataire">Célibataire</option>
+                                <option value="marie">Marié(e)</option>
+                                <option value="autre">Autre</option>
+                            </select>
+                        </div>
+                        <div class="form-group member-status">
+                            <label>STATUT DU MEMBRE</label>
+                            <div>
+                                <input type="radio" id="new-member" name="member-status" value="nouveau" checked>
+                                <label for="new-member">Nouveau</label>
+                                <input type="radio" id="old-member" name="member-status" value="ancien">
+                                <label for="old-member">Ancien</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="profession">PROFESSION</label>
+                            <input type="text" id="profession" name="profession" placeholder="Votre métier">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">TÉLÉPHONE</label>
+                            <div class="phone-input">
+                                <span>+229</span>
+                                <input type="tel" id="phone" name="phone" placeholder="00 00 00 00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-section">
+                <h2><i class="fa-solid fa-church"></i> DÉTAILS INSTITUTIONNELS</h2>
+                <div class="form-grid-institution">
+                    <div class="form-group">
+                        <label for="vicariat">VICARIAT</label>
+                        <select id="vicariat" name="vicariat">
+                            <option value="">Choisir le vicariat</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="paroisse">PAROISSE</label>
+                        <input type="text" id="paroisse" name="paroisse" placeholder="Nom de votre paroisse">
+                    </div>
+                    <div class="form-group motivations">
+                        <label for="motivations">MOTIVATIONS</label>
+                        <textarea id="motivations" name="motivations" placeholder="Quelles sont les motivations qui vous amènent à rejoindre le Service Jeune du Renouveau Charismatique Catholique du Bénin ?"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <div class="form-buttons">
+                <button type="reset" class="reset-btn"><i class="fa-solid fa-rotate-right"></i> RÉINITIALISER</button>
+                <button type="submit" class="submit-btn"><i class="fa-solid fa-user-plus"></i> ENREGISTRER LE PARTICIPANT</button>
             </div>
-
-            <div class="fieldRow">
-              <label class="field">
-                <span class="field__label">Profession</span>
-                <input class="field__control" name="profession" autocomplete="organization-title" />
-              </label>
-              <label class="field">
-                <span class="field__label">Téléphone (01XXXXXXXX)</span>
-                <input class="field__control" name="telephone" inputmode="numeric" placeholder="01XXXXXXXX" />
-              </label>
-            </div>
-
-            <label class="field">
-              <span class="field__label">Situation relationnelle</span>
-              <select class="field__control" name="situation_relationnelle">
-                <option value="">Choisir</option>
-                <option value="Célibataire">Célibataire</option>
-                <option value="Libre">Libre</option>
-                <option value="Engagé(e)">Engagé(e)</option>
-                <option value="En couple">En couple</option>
-                <option value="Marié(e)">Marié(e)</option>
-                <option value="Divorcé(e)">Divorcé(e)</option>
-                <option value="Veuf/Veuve">Veuf/Veuve</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span class="field__label">Photo (optionnel)</span>
-              <input class="field__control" type="file" name="photo" accept="image/*" />
-              <span class="field__hint">Taille conseillée &lt; 800KB.</span>
-            </label>
-          </div>
+        </form>
+        <div class="theme-toggle">
+            <i class="fa-solid fa-sun"></i>
         </div>
+    </main>
 
-        <div class="cardSection">
-          <div class="sectionTitle">Détails institutionnels</div>
-
-          <div class="fields">
-            <div class="fieldRow">
-              <label class="field">
-                <span class="field__label">Vicariat *</span>
-                <select class="field__control" name="vicariat" id="vicariat" required></select>
-              </label>
-              <label class="field">
-                <span class="field__label">Paroisse *</span>
-                <select class="field__control" name="paroisse" id="paroisse" required></select>
-              </label>
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">
+                <p>RCC Benin</p>
+                <p>© 2024 Renouveau Charismatique Catholique du Bénin (RCCB)</p>
             </div>
-
-            <label class="field">
-              <span class="field__label">Commentaires</span>
-              <textarea class="field__control" name="commentaires" rows="3" placeholder="Informations complémentaires..."></textarea>
-            </label>
-          </div>
+            <div class="footer-links">
+                <a href="#">Confidentialité</a>
+                <a href="#">Conditions d'utilisation</a>
+                <a href="#">Contactez-nous</a>
+            </div>
         </div>
+    </footer>
 
-        <div class="formActions">
-          <button type="submit" class="btnPrimary">Enregistrer</button>
-          <p id="flash" class="flash" role="status" aria-live="polite"></p>
-        </div>
-      </form>
-    </section>
-  </main>
-
-  <script src="/app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
