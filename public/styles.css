@@ -302,6 +302,30 @@ textarea {
     margin-top: 20px;
 }
 
+.flash {
+    margin: 0 30px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+.flash:empty {
+    display: none;
+}
+
+.flash[data-type="success"] {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+}
+
+.flash[data-type="error"] {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
 .reset-btn, .submit-btn {
     padding: 12px 25px;
     border: 1px solid var(--primary-color);

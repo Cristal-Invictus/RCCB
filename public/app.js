@@ -1,4 +1,7 @@
-// Vicariats / Paroisses (Bénin) - extrait du seed fourni
+// Frontend <-> Backend connector for RCCB registration
+// - Sends JSON to POST /api/inscriptions
+// - Handles optional photo as base64 data URL
+
 const VICARIATS_PAROISSES = {
   "Vicariat Forain Notre-Dame Cotonou": [
     "Cathédrale Notre-Dame de Miséricorde",
@@ -162,13 +165,10 @@ const VICARIATS_PAROISSES = {
   ]
 };
 
-const form = document.getElementById('inscriptionForm');
-const vicariatSelect = document.getElementById('vicariat');
-const paroisseSelect = document.getElementById('paroisse');
-const flash = document.getElementById('flash');
+const VICARIATS = Object.keys(VICARIATS_PAROISSES);
 
-function todayYmd() {
-  return new Date().toISOString().slice(0, 10);
+function $(sel) {
+  return document.querySelector(sel);
 }
 
 function normalizeSpaces(s) {
@@ -188,134 +188,225 @@ function fileToDataUrl(file) {
     reader.readAsDataURL(file);
   });
 }
+function setFlash(message, type = 'info') {
+  const el = $('#flash');
+  if (!el) return;
+  el.textContent = message || '';
+  el.dataset.type = type;
+}
 
 function initVicariats() {
-  vicariatSelect.innerHTML = '<option value="">Choisir</option>';
-  Object.keys(VICARIATS_PAROISSES).forEach((v) => {
-    const o = document.createElement('option'); o.value = v; o.textContent = v;
+  const vicariatSelect = $('#vicariat');
+  if (!vicariatSelect) return;
+  // Remove existing options except placeholder
+  [...vicariatSelect.querySelectorAll('option')]
+    .filter((o) => o.value !== '')
+    .forEach((o) => o.remove());
+  VICARIATS.forEach((v) => {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = v;
     vicariatSelect.appendChild(o);
   });
 }
 
 function populateParoisses(vicariat) {
-  paroisseSelect.innerHTML = '<option value="">Choisir</option>';
+  const paroisseSelect = $('#paroisse');
+  if (!paroisseSelect) return;
+
+  paroisseSelect.innerHTML = '<option value="">Choisir la paroisse</option>';
   (VICARIATS_PAROISSES[vicariat] || []).forEach((p) => {
-    const o = document.createElement('option'); o.value = p; o.textContent = p;
+    const o = document.createElement('option');
+    o.value = p;
+    o.textContent = p;
     paroisseSelect.appendChild(o);
   });
 }
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  flash.textContent = '';
-  const fd = new FormData(form);
-  const data = Object.fromEntries(fd.entries());
+function todayYmd() {
+  return new Date().toISOString().slice(0, 10);
+}
 
-  // Champs supprimés (compat)
-  delete data.age;
-  delete data.email;
-  delete data.statut_marital;
+function initPhotoUpload() {
+  const placeholder = $('.photo-placeholder');
+  const input = $('#photo');
+  if (!placeholder || !input) return;
 
-  // Normalisation / validations
-  data.nom = normalizeSpaces(data.nom);
-  data.prenom = normalizeSpaces(data.prenom);
-
-  if (!data.nom || !NAME_RE.test(data.nom)) {
-    flash.textContent = "Nom invalide (lettres uniquement, espaces, '-' et apostrophe autorisés).";
-    flash.style.color = 'crimson';
-    return;
-  }
-  if (!data.prenom || !NAME_RE.test(data.prenom)) {
-    flash.textContent = "Prénom invalide (lettres uniquement, espaces, '-' et apostrophe autorisés).";
-    flash.style.color = 'crimson';
-    return;
-  }
-
-  if (data.telephone) {
-    data.telephone = String(data.telephone).replace(/\s+/g, '');
-    if (!BJ_PHONE_RE.test(data.telephone)) {
-      flash.textContent = 'Téléphone invalide (format attendu: 01XXXXXXXX).';
-      flash.style.color = 'crimson';
+  placeholder.addEventListener('click', () => input.click());
+  input.addEventListener('change', async () => {
+    setFlash('');
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 800 * 1024) {
+      input.value = '';
+      setFlash('Photo trop lourde (max ~800KB).', 'error');
       return;
+    }
+    try {
+      const url = await fileToDataUrl(file);
+      placeholder.innerHTML = `<img src="${url}" alt="Aperçu" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
+    } catch {
+      input.value = '';
+      setFlash("Impossible de lire l'image.", 'error');
+    }
+  });
+}
+
+async function buildPayloadFromForm(form) {
+  const fd = new FormData(form);
+
+  const nom = normalizeSpaces(fd.get('nom'));
+  const prenom = normalizeSpaces(fd.get('prenom'));
+  const date_naissance = String(fd.get('date_naissance') || '').trim();
+  const presence_date = String(fd.get('presence_date') || '').trim();
+  const sexe = String(fd.get('sexe') || '').trim();
+  const situation_relationnelle = String(fd.get('situation_relationnelle') || '').trim();
+  const profession = normalizeSpaces(fd.get('profession'));
+  const telephoneRaw = String(fd.get('telephone') || '').replace(/\s+/g, '').trim();
+  const vicariat = String(fd.get('vicariat') || '').trim();
+  const paroisse = normalizeSpaces(fd.get('paroisse'));
+  const commentaires = normalizeSpaces(fd.get('commentaires'));
+
+  if (!nom || !NAME_RE.test(nom)) {
+    throw new Error("Nom invalide (lettres uniquement, espaces, '-' et apostrophe autorisés).");
+  }
+  if (!prenom || !NAME_RE.test(prenom)) {
+    throw new Error("Prénom invalide (lettres uniquement, espaces, '-' et apostrophe autorisés).");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date_naissance)) {
+    throw new Error('Date de naissance invalide (format attendu: YYYY-MM-DD).');
+  }
+  if (!/^\d{4}-\d{{2}}-\d{2}$/.test(presence_date)) {
+    // NOTE: kept as string; fix regexp below
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(presence_date)) {
+    throw new Error('Date de présence invalide (format attendu: YYYY-MM-DD).');
+  }
+  if (!sexe) throw new Error('Veuillez sélectionner le sexe.');
+  if (!vicariat) throw new Error('Veuillez sélectionner le vicariat.');
+  if (!paroisse) throw new Error('Veuillez renseigner la paroisse.');
+
+  let telephone = telephoneRaw;
+  if (telephone) {
+    if (!BJ_PHONE_RE.test(telephone)) {
+      throw new Error('Téléphone invalide (format attendu: 01XXXXXXXX).');
     }
   }
 
-  // Photo (optionnel) -> base64 data URL
+  let photo = '';
   const file = fd.get('photo');
   if (file && file instanceof File && file.size > 0) {
-    // limite simple côté client (~800KB) pour éviter de saturer
-    if (file.size > 800 * 1024) {
-      flash.textContent = 'Photo trop lourde (max ~800KB).';
-      flash.style.color = 'crimson';
-      return;
-    }
-    data.photo = await fileToDataUrl(file);
-  } else {
-    data.photo = '';
+    photo = await fileToDataUrl(file);
   }
 
-  try {
-    const r = await fetch('/api/inscriptions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
+  return {
+    nom,
+    prenom,
+    date_naissance,
+    sexe,
+    situation_relationnelle,
+    profession,
+    telephone,
+    photo,
+    vicariat,
+    paroisse,
+    commentaires,
+    presence_date
+  };
+}
 
-    if (!r.ok) {
-      let msg = `Erreur (HTTP ${r.status})`;
-      try {
-        const err = await r.json();
-        msg = err.error || msg;
-      } catch {
-        // ignore
-      }
-      flash.textContent = msg;
-      flash.style.color = 'crimson';
-      return;
-    }
+async function submitInscription(payload) {
+  const r = await fetch('/api/inscriptions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
 
-  flash.textContent = 'Présence enregistrée.';
-    flash.style.color = 'green';
-    form.reset();
-    populateParoisses('');
-  } catch (err) {
-    flash.textContent = `Erreur réseau: ${String(err && err.message ? err.message : err)}`;
-    flash.style.color = 'crimson';
+  const ct = r.headers.get('content-type') || '';
+  const body = ct.includes('application/json') ? await r.json() : await r.text();
+  if (!r.ok) {
+    const message = (body && body.error) || (typeof body === 'string' ? body : 'Erreur lors de la soumission.');
+    throw new Error(message);
   }
-});
+  return body;
+}
 
-vicariatSelect.addEventListener('change', (e) => populateParoisses(e.target.value));
-
-initVicariats();
-populateParoisses('');
-
-// Date de présence = aujourd'hui par défaut
-const presenceDateInput = form?.querySelector('input[name="presence_date"]');
-if (presenceDateInput && !presenceDateInput.value) {
-  presenceDateInput.value = todayYmd();
+function initThemeToggle() {
+  const t = $('.theme-toggle');
+  if (!t) return;
+  if (localStorage.getItem('theme') === 'dark-mode') {
+    document.body.classList.add('dark-mode');
+  }
+  t.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+    if (document.body.classList.contains('dark-mode')) {
+      localStorage.setItem('theme', 'dark-mode');
+    } else {
+      localStorage.removeItem('theme');
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Theme toggle functionality
-    const themeToggle = document.querySelector('.theme-toggle');
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            // You can save the theme preference in localStorage
-            if (document.body.classList.contains('dark-mode')) {
-                localStorage.setItem('theme', 'dark-mode');
-            } else {
-                localStorage.removeItem('theme');
-            }
-        });
-    }
+  initVicariats();
+  initPhotoUpload();
+  initThemeToggle();
 
-    // Apply saved theme
-    if (localStorage.getItem('theme') === 'dark-mode') {
-        document.body.classList.add('dark-mode');
-    }
+  const presenceDateInput = $('#presence-date');
+  if (presenceDateInput && !presenceDateInput.value) {
+    presenceDateInput.value = todayYmd();
+  }
 
-    // Photo upload functionality
+  const vicariatSelect = $('#vicariat');
+  if (vicariatSelect) {
+    populateParoisses(vicariatSelect.value);
+    vicariatSelect.addEventListener('change', (e) => {
+      populateParoisses(e.target.value);
+    });
+  }
+
+  const form = $('#registration-form');
+  if (!form) return;
+
+  form.addEventListener('reset', () => {
+    setFlash('');
+    const placeholder = $('.photo-placeholder');
+    if (placeholder) {
+      placeholder.innerHTML = `
+        <i class="fa-solid fa-camera"></i>
+        <span>PHOTO (UPLOAD)</span>
+      `;
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setFlash('');
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const oldHtml = submitBtn ? submitBtn.innerHTML : '';
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Envoi…';
+      }
+
+      const payload = await buildPayloadFromForm(form);
+      await submitInscription(payload);
+
+      setFlash('Enregistrement réussi.', 'success');
+      form.reset();
+    } catch (err) {
+      setFlash(String(err && err.message ? err.message : err), 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = oldHtml;
+      }
+    }
+  });
+});
     const photoPlaceholder = document.querySelector('.photo-placeholder');
     const photoInput = document.getElementById('photo');
     if (photoPlaceholder && photoInput) {
@@ -396,43 +487,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add dark mode styles
-    const style = document.createElement('style');
-    style.innerHTML = `
-        body.dark-mode {
-            background-color: #1a1a1a;
-            color: #eee;
-        }
-        body.dark-mode header,
-        body.dark-mode footer,
-        body.dark-mode #registration-form {
-            background-color: #2c2c2c;
-            border-color: #444;
-        }
-        body.dark-mode .intro .quote {
-            background-color: #333;
-            border-color: #e8a800;
-        }
-        body.dark-mode input,
-        body.dark-mode select,
-        body.dark-mode textarea {
-            background-color: #333;
-            border-color: #555;
-            color: #eee;
-        }
-        body.dark-mode .phone-input span {
-            background-color: #444;
-            border-color: #555;
-        }
-        body.dark-mode .reset-btn {
-            background-color: #2c2c2c;
-            color: #e74c3c;
-            border-color: #e74c3c;
-        }
-        body.dark-mode header .logo,
-        body.dark-mode .intro h1 {
-            color: #d35400;
-        }
-    `;
-    document.head.appendChild(style);
-});
+// (Dark-mode styles are handled in CSS; keep JS minimal.)

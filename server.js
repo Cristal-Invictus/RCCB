@@ -11,8 +11,10 @@ const PORT = process.env.PORT || 3000;
 // On attend une variable DATABASE_URL (Supabase fournit ce format).
 // Exemple: postgres://USER:PASSWORD@HOST:5432/postgres
 const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  console.error('Missing DATABASE_URL. Configure it (e.g. Supabase Postgres connection string).');
+const FORCE_MEMORY_DB = String(process.env.RCCB_USE_MEMORY_DB || '').toLowerCase();
+const USE_MEMORY_DB = FORCE_MEMORY_DB === '1' || FORCE_MEMORY_DB === 'true' || FORCE_MEMORY_DB === 'yes' || !DATABASE_URL;
+if (USE_MEMORY_DB) {
+  console.warn('[RCCB] DATABASE_URL missing -> using in-memory storage (local dev).');
 }
 
 function shouldUseSsl(databaseUrl) {
@@ -25,10 +27,18 @@ function shouldUseSsl(databaseUrl) {
   return /supabase\.com/i.test(databaseUrl || '');
 }
 
-const pool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl: shouldUseSsl(DATABASE_URL) ? { rejectUnauthorized: false } : false
-});
+const pool = USE_MEMORY_DB
+  ? null
+  : new Pool({
+      connectionString: DATABASE_URL,
+      ssl: shouldUseSsl(DATABASE_URL) ? { rejectUnauthorized: false } : false
+    });
+
+// In-memory fallback (local dev only)
+const mem = {
+  seq: 1,
+  inscriptions: []
+};
 
 app.use(express.json({ limit: '6mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -119,6 +129,14 @@ app.post('/api/admin/logout', (_req, res) => {
 // Lecture = admin (dashboard). Écriture = public (formulaire)
 app.get('/api/inscriptions', requireAdmin, async (_req, res) => {
   try {
+    if (!pool) {
+      const presenceDate = (_req.query && String(_req.query.date || '').trim()) || '';
+      const rows = presenceDate
+        ? mem.inscriptions.filter((r) => r.presence_date === presenceDate).slice().reverse()
+        : mem.inscriptions.slice().reverse();
+      return res.json(rows);
+    }
+
     const presenceDate = (_req.query && String(_req.query.date || '').trim()) || '';
     const q = presenceDate
       ? 'SELECT * FROM inscriptions WHERE presence_date = $1 ORDER BY id DESC'
@@ -135,6 +153,39 @@ app.get('/api/inscriptions', requireAdmin, async (_req, res) => {
 // Export CSV (admin)
 app.get('/api/inscriptions.csv', requireAdmin, async (_req, res) => {
   try {
+    if (!pool) {
+      const presenceDate = (_req.query && String(_req.query.date || '').trim()) || '';
+      const rows = presenceDate
+        ? mem.inscriptions.filter((r) => r.presence_date === presenceDate).slice().reverse()
+        : mem.inscriptions.slice().reverse();
+
+      const headers = [
+        'id',
+        'presence_date',
+        'created_at',
+        'nom',
+        'prenom',
+        'date_naissance',
+        'sexe',
+        'situation_relationnelle',
+        'profession',
+        'telephone',
+        'photo',
+        'vicariat',
+        'paroisse',
+        'commentaires'
+      ];
+
+      const csv = [
+        headers.join(','),
+        ...rows.map((r) => headers.map((h) => escapeCsv(r[h])).join(','))
+      ].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="inscriptions.csv"');
+      return res.send('\uFEFF' + csv);
+    }
+
     const presenceDate = (_req.query && String(_req.query.date || '').trim()) || '';
     const q = presenceDate
       ? 'SELECT * FROM inscriptions WHERE presence_date = $1 ORDER BY id DESC'
@@ -238,6 +289,12 @@ app.post('/api/inscriptions', async (req, res) => {
   created_at: new Date().toISOString()
     };
 
+    if (!pool) {
+      const row = { id: mem.seq++, ...payload };
+      mem.inscriptions.push(row);
+      return res.status(201).json(row);
+    }
+
     const q = `
       INSERT INTO inscriptions
   (nom, prenom, date_naissance, sexe, situation_relationnelle, profession, telephone, photo, vicariat, paroisse, commentaires, presence_date, created_at)
@@ -273,25 +330,27 @@ app.get('*', (_req, res) => {
 });
 
 async function start() {
-  // Create tables if needed
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS inscriptions (
-      id BIGSERIAL PRIMARY KEY,
-      nom TEXT NOT NULL,
-      prenom TEXT NOT NULL,
-  date_naissance DATE NOT NULL,
-      sexe TEXT NOT NULL,
-  situation_relationnelle TEXT,
-      profession TEXT,
-      telephone TEXT,
-      photo TEXT,
-      vicariat TEXT NOT NULL,
-      paroisse TEXT NOT NULL,
-      commentaires TEXT,
-  presence_date DATE NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL
-    );
-  `);
+  // Create tables if needed (only when DB configured)
+  if (pool) {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inscriptions (
+        id BIGSERIAL PRIMARY KEY,
+        nom TEXT NOT NULL,
+        prenom TEXT NOT NULL,
+        date_naissance DATE NOT NULL,
+        sexe TEXT NOT NULL,
+        situation_relationnelle TEXT,
+        profession TEXT,
+        telephone TEXT,
+        photo TEXT,
+        vicariat TEXT NOT NULL,
+        paroisse TEXT NOT NULL,
+        commentaires TEXT,
+        presence_date DATE NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL
+      );
+    `);
+  }
 
   app.listen(PORT, () => {
     console.log(`RCCB app running on http://localhost:${PORT}`);

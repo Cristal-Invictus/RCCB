@@ -33,7 +33,7 @@
                 </div>
             </section>
 
-            <form id="registration-form">
+            <form id="registration-form" novalidate>
                 <section class="form-section">
                     <h2 class="section-title"><i class="fa-solid fa-user"></i> INFORMATIONS PERSONNELLES</h2>
                     <div class="form-grid">
@@ -49,11 +49,11 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="presence-date">DATE DE PRÉSENCE</label>
-                                    <input type="text" id="presence-date" name="presence-date" placeholder="mm/dd/yyyy">
+                                    <input type="date" id="presence-date" name="presence_date" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="sex">SEXE</label>
-                                    <select id="sex" name="sex">
+                                    <select id="sex" name="sexe" required>
                                         <option value="">Sélectionner</option>
                                         <option value="homme">Homme</option>
                                         <option value="femme">Femme</option>
@@ -63,21 +63,21 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="last-name">NOM</label>
-                                    <input type="text" id="last-name" name="last-name" placeholder="Entrez votre nom">
+                                    <input type="text" id="last-name" name="nom" placeholder="Entrez votre nom" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="first-name">PRÉNOM</label>
-                                    <input type="text" id="first-name" name="first-name" placeholder="Entrez votre prénom">
+                                    <input type="text" id="first-name" name="prenom" placeholder="Entrez votre prénom" required>
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="birth-date">DATE DE NAISSANCE</label>
-                                    <input type="text" id="birth-date" name="birth-date" placeholder="mm/dd/yyyy">
+                                    <input type="date" id="birth-date" name="date_naissance" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="relationship-status">SITUATION RELATIONNELLE</label>
-                                    <select id="relationship-status" name="relationship-status">
+                                    <select id="relationship-status" name="situation_relationnelle">
                                         <option value="">Sélectionner</option>
                                         <option value="celibataire">Célibataire</option>
                                         <option value="marie">Marié(e)</option>
@@ -105,7 +105,7 @@
                                     <label for="phone">TÉLÉPHONE</label>
                                     <div class="phone-input">
                                         <span>+229</span>
-                                        <input type="tel" id="phone" name="phone" placeholder="00 00 00 00">
+                                        <input type="tel" id="phone" name="telephone" placeholder="01XXXXXXXX">
                                     </div>
                                 </div>
                             </div>
@@ -119,21 +119,25 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="vicariat">VICARIAT</label>
-                                <select id="vicariat" name="vicariat">
+                                <select id="vicariat" name="vicariat" required>
                                     <option value="">Choisir le vicariat</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label for="paroisse">PAROISSE</label>
-                                <input type="text" id="paroisse" name="paroisse" placeholder="Nom de votre paroisse">
+                                <select id="paroisse" name="paroisse" required>
+                                    <option value="">Choisir la paroisse</option>
+                                </select>
                             </div>
                         </div>
                         <div class="form-group motivations">
                             <label for="motivations">MOTIVATIONS</label>
-                            <textarea id="motivations" name="motivations" placeholder="Quelles sont les motivations qui vous amènent à rejoindre le Service Jeune du Renouveau Charismatique Catholique du Bénin ?"></textarea>
+                            <textarea id="motivations" name="commentaires" placeholder="Quelles sont les motivations qui vous amènent à rejoindre le Service Jeune du Renouveau Charismatique Catholique du Bénin ?"></textarea>
                         </div>
                     </div>
                 </section>
+
+                <p id="flash" class="flash" aria-live="polite"></p>
 
                 <div class="form-buttons">
                     <button type="reset" class="reset-btn"><i class="fa-solid fa-rotate-right"></i> RÉINITIALISER</button>
