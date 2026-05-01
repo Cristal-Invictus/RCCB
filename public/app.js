@@ -167,6 +167,29 @@ const VICARIATS_PAROISSES = {
 
 const VICARIATS = Object.keys(VICARIATS_PAROISSES);
 
+const VERSETS_RENCONTRE = [
+  {
+    text: "Car là où deux ou trois sont assemblés en mon nom, je suis au milieu d'eux.",
+    reference: 'Matthieu 18:20'
+  },
+  {
+    text: "Vous recevrez une puissance, le Saint-Esprit survenant sur vous.",
+    reference: 'Actes 1:8'
+  },
+  {
+    text: 'Que personne ne méprise ta jeunesse; mais sois un modèle pour les fidèles.',
+    reference: '1 Timothée 4:12'
+  },
+  {
+    text: "Là où est l'Esprit du Seigneur, là est la liberté.",
+    reference: '2 Corinthiens 3:17'
+  },
+  {
+    text: 'Fortifie-toi et prends courage.',
+    reference: 'Josué 1:9'
+  }
+];
+
 function $(sel) {
   return document.querySelector(sel);
 }
@@ -260,6 +283,26 @@ function setFlash(message, type = 'info') {
   if (!el) return;
   el.textContent = message || '';
   el.dataset.type = type;
+}
+
+function initVerseRotator() {
+  const verseText = $('#verseText');
+  const verseReference = $('#verseReference');
+  if (!verseText || !verseReference || VERSETS_RENCONTRE.length < 2) return;
+
+  let index = 0;
+  setInterval(() => {
+    verseText.classList.add('opacity-0', 'translate-y-3');
+    verseReference.classList.add('opacity-0');
+
+    setTimeout(() => {
+      index = (index + 1) % VERSETS_RENCONTRE.length;
+      verseText.textContent = `"${VERSETS_RENCONTRE[index].text}"`;
+      verseReference.textContent = VERSETS_RENCONTRE[index].reference;
+      verseText.classList.remove('opacity-0', 'translate-y-3');
+      verseReference.classList.remove('opacity-0');
+    }, 550);
+  }, 6000);
 }
 
 function initVicariats() {
@@ -596,6 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initBirthDateRules();
   initCanalInformation();
   initPhotoUpload();
+  initVerseRotator();
   initThemeToggle();
 
   const vicariatSelect = $('#vicariat');

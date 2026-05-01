@@ -143,11 +143,22 @@
       </div>
     </header>
 
-    <div class="bg-surface-container-low border-l-4 border-secondary-container p-8 mb-16 spirit-shadow rounded-lg italic">
-      <p class="text-on-surface-variant text-lg leading-relaxed">
-        "Car là où deux ou trois sont assemblés en mon nom, je suis au milieu d'eux."
-        <span class="not-italic font-bold text-primary block mt-2 text-sm">- Matthieu 18:20</span>
-      </p>
+    <div id="verseRotator" class="bg-surface-container-low border-l-4 border-secondary-container p-8 mb-16 spirit-shadow rounded-lg text-center transition-all duration-700">
+      <div class="inline-flex items-center justify-center w-12 h-12 fire-gradient rounded-xl mb-6 shadow-lg shadow-orange-200">
+        <span class="material-symbols-outlined text-white text-2xl">auto_stories</span>
+      </div>
+      <div class="min-h-[120px] flex flex-col justify-center">
+        <p id="verseText" class="text-on-surface-variant text-xl md:text-2xl font-bold leading-relaxed italic transition-all duration-500 opacity-100 translate-y-0">
+          "Car là où deux ou trois sont assemblés en mon nom, je suis au milieu d'eux."
+        </p>
+        <div class="mt-6 flex items-center justify-center gap-3">
+          <div class="h-px w-8 bg-secondary-container"></div>
+          <span id="verseReference" class="text-xs font-bold uppercase tracking-[0.2em] text-primary transition-all duration-500 opacity-100">
+            Matthieu 18:20
+          </span>
+          <div class="h-px w-8 bg-secondary-container"></div>
+        </div>
+      </div>
     </div>
 
     <form id="registration-form" class="space-y-16" novalidate>
@@ -272,7 +283,7 @@
           </div>
           <div class="md:col-span-2 grid grid-cols-1 gap-6">
             <div class="flex flex-col gap-2">
-              <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" for="raison_presence">
+              <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="raison_presence">
                 Pourquoi as-tu choisi de venir à cette rencontre ? <span class="text-red-500">*</span>
               </label>
               <textarea class="bg-white border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all placeholder:text-slate-300 resize-none" id="raison_presence" name="raison_presence" placeholder="Partage tes motivations..." rows="3" required></textarea>
@@ -280,7 +291,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="flex flex-col gap-2">
-                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" for="canal_information">
+                <label class="text-xs text-on-surface-variant uppercase font-semibold tracking-wider" for="canal_information">
                   Par quel canal as-tu été informé de cette rencontre ? <span class="text-red-500">*</span>
                 </label>
                 <select class="bg-white border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all appearance-none" id="canal_information" name="canal_information" required>
