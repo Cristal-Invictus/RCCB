@@ -394,6 +394,7 @@ function resetMeetingDate() {
 function initPhotoUpload() {
   const placeholder = $('.photo-placeholder');
   const input = $('#photo');
+  const cameraInput = $('#cameraPhoto');
   const photoDataInput = $('#photoData');
   const choosePhotoBtn = $('#choosePhotoBtn');
   const openCameraBtn = $('#openCameraBtn');
@@ -409,6 +410,13 @@ function initPhotoUpload() {
   if (!placeholder || !input) return;
 
   let stream = null;
+
+  function shouldUseNativeCameraInput() {
+    const ua = navigator.userAgent || '';
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    const isTouchDevice = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    return Boolean(cameraInput && (isMobile || isTouchDevice));
+  }
 
   function stopCamera() {
     if (stream) {
@@ -448,6 +456,13 @@ function initPhotoUpload() {
   }
 
   async function openCamera() {
+    if (shouldUseNativeCameraInput()) {
+      setFlash('');
+      cameraInput.value = '';
+      cameraInput.click();
+      return;
+    }
+
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setFlash('Caméra indisponible sur ce navigateur. Utilisez “Choisir une photo”.', 'error');
       return;
@@ -480,12 +495,12 @@ function initPhotoUpload() {
   openCameraBtn?.addEventListener('click', openCamera);
   closeBtn?.addEventListener('click', closeCamera);
 
-  input.addEventListener('change', async () => {
+  async function handleSelectedPhoto(fileInput) {
     setFlash('');
-    const file = input.files && input.files[0];
+    const file = fileInput.files && fileInput.files[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
-      input.value = '';
+      fileInput.value = '';
       setFlash('Photo trop lourde (max 2Mo).', 'error');
       return;
     }
@@ -494,10 +509,13 @@ function initPhotoUpload() {
       if (photoDataInput) photoDataInput.value = url;
       setPhotoPreview(url);
     } catch {
-      input.value = '';
+      fileInput.value = '';
       setFlash("Impossible de lire l'image.", 'error');
     }
-  });
+  }
+
+  input.addEventListener('change', () => handleSelectedPhoto(input));
+  cameraInput?.addEventListener('change', () => handleSelectedPhoto(cameraInput));
 
   captureBtn?.addEventListener('click', () => {
     if (!video || !canvas) return;
