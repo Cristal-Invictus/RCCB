@@ -188,6 +188,55 @@ function fileToDataUrl(file) {
     reader.readAsDataURL(file);
   });
 }
+
+function dataUrlToFile(dataUrl, filename) {
+  const parts = String(dataUrl || '').split(',');
+  const meta = parts[0] || '';
+  const base64 = parts[1] || '';
+  const mimeMatch = /^data:([^;]+);base64$/.exec(meta);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new File([bytes], filename, { type: mime });
+}
+
+function firstSundayOfMonth(date = new Date()) {
+  const d = new Date(date.getFullYear(), date.getMonth(), 1);
+  const offset = (7 - d.getDay()) % 7;
+  d.setDate(1 + offset);
+  return d;
+}
+
+function toYmd(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatMeetingDateFr(value) {
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return '';
+  const formatted = d.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+  return formatted.replace(/\b([a-zà-ÿ])/g, (letter) => letter.toUpperCase());
+}
+
+function setPhotoPreview(dataUrl) {
+  const finalPreview = $('#photoFinalPreview');
+  const placeholder = $('.photo-placeholder');
+  if (!finalPreview || !placeholder) return;
+  finalPreview.src = dataUrl;
+  finalPreview.classList.remove('hidden');
+  placeholder.classList.add('border-primary');
+}
+
 function setFlash(message, type = 'info') {
   const el = $('#flash');
   if (!el) return;
@@ -223,16 +272,102 @@ function populateParoisses(vicariat) {
   });
 }
 
-function todayYmd() {
-  return new Date().toISOString().slice(0, 10);
+function initMeetingDate() {
+  const presenceDateInput = $('#presence-date');
+  const meetingDateLabel = $('#meetingDateLabel');
+  if (!presenceDateInput) return;
+
+  if (!presenceDateInput.value) {
+    presenceDateInput.value = toYmd(firstSundayOfMonth());
+  }
+
+  function syncLabel() {
+    if (meetingDateLabel) {
+      meetingDateLabel.textContent = formatMeetingDateFr(presenceDateInput.value);
+    }
+  }
+
+  syncLabel();
+  presenceDateInput.addEventListener('change', syncLabel);
+}
+
+function resetMeetingDate() {
+  const presenceDateInput = $('#presence-date');
+  const meetingDateLabel = $('#meetingDateLabel');
+  if (!presenceDateInput) return;
+  presenceDateInput.value = toYmd(firstSundayOfMonth());
+  if (meetingDateLabel) {
+    meetingDateLabel.textContent = formatMeetingDateFr(presenceDateInput.value);
+  }
 }
 
 function initPhotoUpload() {
   const placeholder = $('.photo-placeholder');
   const input = $('#photo');
+  const photoDataInput = $('#photoData');
+  const choosePhotoBtn = $('#choosePhotoBtn');
+  const openCameraBtn = $('#openCameraBtn');
+  const panel = $('#photoCapturePanel');
+  const video = $('#cameraPreview');
+  const canvas = $('#cameraCanvas');
+  const captureBtn = $('#capturePhotoBtn');
+  const retakeBtn = $('#retakePhotoBtn');
+  const useBtn = $('#usePhotoBtn');
+  const closeBtn = $('#closeCameraBtn');
+  const controlsInitial = $('#cameraControlsInitial');
+  const controlsReview = $('#cameraControlsReview');
   if (!placeholder || !input) return;
 
-  placeholder.addEventListener('click', () => input.click());
+  let stream = null;
+
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      stream = null;
+    }
+    if (video) video.srcObject = null;
+  }
+
+  function closeCamera() {
+    stopCamera();
+    panel?.classList.add('hidden');
+    panel?.classList.remove('flex');
+  }
+
+  async function openCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      input.click();
+      setFlash('Caméra indisponible sur ce navigateur. Choisissez une photo.', 'error');
+      return;
+    }
+
+    try {
+      setFlash('');
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false
+      });
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+      }
+      panel?.classList.remove('hidden');
+      panel?.classList.add('flex');
+      controlsInitial?.classList.remove('hidden');
+      controlsInitial?.classList.add('flex');
+      controlsReview?.classList.add('hidden');
+      controlsReview?.classList.remove('flex');
+    } catch {
+      input.click();
+      setFlash('Impossible d’ouvrir la caméra. Vous pouvez choisir une photo.', 'error');
+    }
+  }
+
+  placeholder.addEventListener('click', openCamera);
+  choosePhotoBtn?.addEventListener('click', () => input.click());
+  openCameraBtn?.addEventListener('click', openCamera);
+  closeBtn?.addEventListener('click', closeCamera);
+
   input.addEventListener('change', async () => {
     setFlash('');
     const file = input.files && input.files[0];
@@ -244,11 +379,50 @@ function initPhotoUpload() {
     }
     try {
       const url = await fileToDataUrl(file);
-      placeholder.innerHTML = `<img src="${url}" alt="Aperçu" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
+      if (photoDataInput) photoDataInput.value = url;
+      setPhotoPreview(url);
     } catch {
       input.value = '';
       setFlash("Impossible de lire l'image.", 'error');
     }
+  });
+
+  captureBtn?.addEventListener('click', () => {
+    if (!video || !canvas) return;
+    const width = video.videoWidth || 640;
+    const height = video.videoHeight || 640;
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+    video.pause();
+    controlsInitial?.classList.add('hidden');
+    controlsInitial?.classList.remove('flex');
+    controlsReview?.classList.remove('hidden');
+    controlsReview?.classList.add('flex');
+  });
+
+  retakeBtn?.addEventListener('click', () => {
+    video?.play();
+    controlsInitial?.classList.remove('hidden');
+    controlsInitial?.classList.add('flex');
+    controlsReview?.classList.add('hidden');
+    controlsReview?.classList.remove('flex');
+  });
+
+  useBtn?.addEventListener('click', () => {
+    if (!canvas || !photoDataInput) return;
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    photoDataInput.value = dataUrl;
+    setPhotoPreview(dataUrl);
+    try {
+      const photoFile = dataUrlToFile(dataUrl, 'photo-camera.jpg');
+      const dt = new DataTransfer();
+      dt.items.add(photoFile);
+      input.files = dt.files;
+    } catch {
+      input.value = '';
+    }
+    closeCamera();
   });
 }
 
@@ -276,9 +450,6 @@ async function buildPayloadFromForm(form) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date_naissance)) {
     throw new Error('Date de naissance invalide (format attendu: YYYY-MM-DD).');
   }
-  if (!/^\d{4}-\d{{2}}-\d{2}$/.test(presence_date)) {
-    // NOTE: kept as string; fix regexp below
-  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(presence_date)) {
     throw new Error('Date de présence invalide (format attendu: YYYY-MM-DD).');
   }
@@ -295,14 +466,24 @@ async function buildPayloadFromForm(form) {
   }
 
   let photo = '';
+  const photoData = String($('#photoData')?.value || '').trim();
   const file = fd.get('photo');
-  if (!file || !(file instanceof File) || file.size <= 0) {
+  if (photoData) {
+    if (!photoData.startsWith('data:image/')) {
+      throw new Error('Photo invalide.');
+    }
+    if (photoData.length > 3_000_000) {
+      throw new Error('Photo trop lourde (max 2Mo).');
+    }
+    photo = photoData;
+  } else if (!file || !(file instanceof File) || file.size <= 0) {
     throw new Error('Veuillez ajouter une photo.');
+  } else {
+    if (file.size > 2 * 1024 * 1024) {
+      throw new Error('Photo trop lourde (max 2Mo).');
+    }
+    photo = await fileToDataUrl(file);
   }
-  if (file.size > 2 * 1024 * 1024) {
-    throw new Error('Photo trop lourde (max 2Mo).');
-  }
-  photo = await fileToDataUrl(file);
 
   return {
     nom,
@@ -354,13 +535,9 @@ function initThemeToggle() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initVicariats();
+  initMeetingDate();
   initPhotoUpload();
   initThemeToggle();
-
-  const presenceDateInput = $('#presence-date');
-  if (presenceDateInput && !presenceDateInput.value) {
-    presenceDateInput.value = todayYmd();
-  }
 
   const vicariatSelect = $('#vicariat');
   if (vicariatSelect) {
@@ -375,13 +552,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   form.addEventListener('reset', () => {
     setFlash('');
+    const photoDataInput = $('#photoData');
+    const finalPreview = $('#photoFinalPreview');
     const placeholder = $('.photo-placeholder');
-    if (placeholder) {
-      placeholder.innerHTML = `
-        <span class="material-symbols-outlined text-outline text-5xl mb-2">add_a_photo</span>
-        <span class="text-xs font-semibold text-outline-variant uppercase tracking-widest">Photo (Upload)</span>
-      `;
+    if (photoDataInput) photoDataInput.value = '';
+    if (finalPreview) {
+      finalPreview.removeAttribute('src');
+      finalPreview.classList.add('hidden');
     }
+    placeholder?.classList.remove('border-primary');
+    setTimeout(resetMeetingDate, 0);
   });
 
   form.addEventListener('submit', async (e) => {
