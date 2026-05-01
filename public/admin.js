@@ -15,10 +15,19 @@ const savePresenceStatus = document.getElementById('savePresenceStatus');
 const presenceSavesRows = document.getElementById('presenceSavesRows');
 const presenceSavesEmpty = document.getElementById('presenceSavesEmpty');
 const adminMeetingDateLabel = document.getElementById('adminMeetingDateLabel');
+const presenceSaveDetails = document.getElementById('presenceSaveDetails');
+const closePresenceSaveDetails = document.getElementById('closePresenceSaveDetails');
+const presenceSaveDetailsTitle = document.getElementById('presenceSaveDetailsTitle');
+const presenceSaveDetailsSummary = document.getElementById('presenceSaveDetailsSummary');
+const presenceSaveDetailsRows = document.getElementById('presenceSaveDetailsRows');
+const presenceSaveDetailsEmpty = document.getElementById('presenceSaveDetailsEmpty');
+const downloadSaveCSV = document.getElementById('downloadSaveCSV');
+const downloadSaveExcel = document.getElementById('downloadSaveExcel');
 
 let inscriptions = [];
 let presenceSaves = [];
 let savePresenceStatusTimer = null;
+let selectedPresenceSaveId = null;
 
 function asYmd(value) {
   if (!value) return '';
@@ -130,11 +139,110 @@ function setPresenceSavesEmpty(message, icon = 'cloud_off') {
   presenceSavesEmpty.classList.remove('hidden');
 }
 
+function hidePresenceSaveDetails() {
+  selectedPresenceSaveId = null;
+  if (!presenceSaveDetails) return;
+  presenceSaveDetails.classList.add('hidden');
+  if (presenceSaveDetailsRows) presenceSaveDetailsRows.innerHTML = '';
+  if (presenceSaveDetailsEmpty) presenceSaveDetailsEmpty.classList.add('hidden');
+}
+
+function setPresenceSaveDetailsEmpty(message, icon = 'person_off') {
+  if (!presenceSaveDetailsEmpty) return;
+  presenceSaveDetailsEmpty.innerHTML = `
+    <span class="material-symbols-outlined text-slate-300 text-5xl mb-4">${escapeHtml(icon)}</span>
+    <p class="text-slate-500 font-medium">${escapeHtml(message)}</p>
+  `;
+  presenceSaveDetailsEmpty.classList.remove('hidden');
+}
+
+function renderPresenceSaveDetails(save) {
+  if (!presenceSaveDetails) return;
+  const saveId = encodeURIComponent(save.id);
+  const participants = Array.isArray(save.rows) ? save.rows : [];
+  const count = Number(save.participant_count ?? participants.length);
+
+  if (presenceSaveDetailsTitle) {
+    presenceSaveDetailsTitle.textContent = `Réunion du ${formatYmdFr(save.presence_date)} · sauvegardée le ${formatDateTimeFr(save.saved_at)}`;
+  }
+  if (presenceSaveDetailsSummary) {
+    presenceSaveDetailsSummary.textContent = `${count} participant${count > 1 ? 's' : ''}`;
+  }
+  if (downloadSaveCSV) {
+    downloadSaveCSV.href = `/api/presence-saves/${saveId}.csv`;
+  }
+  if (downloadSaveExcel) {
+    downloadSaveExcel.href = `/api/presence-saves/${saveId}.xls`;
+  }
+
+  if (!participants.length) {
+    if (presenceSaveDetailsRows) presenceSaveDetailsRows.innerHTML = '';
+    setPresenceSaveDetailsEmpty('Aucun participant dans cette sauvegarde', 'person_off');
+  } else {
+    if (presenceSaveDetailsEmpty) presenceSaveDetailsEmpty.classList.add('hidden');
+    if (presenceSaveDetailsRows) {
+      presenceSaveDetailsRows.innerHTML = participants.map((participant) => {
+        const nom = String(participant.nom || '');
+        const prenom = String(participant.prenom || '');
+        const initials = `${nom.charAt(0)}${prenom.charAt(0)}`.toUpperCase() || 'R';
+        const photo = participant.photo
+          ? `<img alt="Photo de ${escapeHtml(nom)} ${escapeHtml(prenom)}" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" src="${escapeHtml(participant.photo)}" />`
+          : `<div class="w-10 h-10 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm">${escapeHtml(initials)}</div>`;
+        return `
+          <tr class="hover:bg-orange-50/30 transition-colors">
+            <td class="px-6 py-4">${photo}</td>
+            <td class="px-6 py-4">
+              <p class="font-bold text-slate-900">${escapeHtml(nom)} ${escapeHtml(prenom)}</p>
+            </td>
+            <td class="px-6 py-4 text-sm text-slate-600">${escapeHtml(participant.sexe || '')}</td>
+            <td class="px-6 py-4 text-sm text-slate-600">${escapeHtml(participant.paroisse || '')}</td>
+            <td class="px-6 py-4 text-sm text-slate-500">${escapeHtml(participant.telephone || '')}</td>
+            <td class="px-6 py-4 text-sm text-slate-600 max-w-xs">${escapeHtml(participant.raison_presence || '')}</td>
+            <td class="px-6 py-4 text-sm text-slate-600">${escapeHtml(participant.canal_information || '')}</td>
+          </tr>`;
+      }).join('');
+    }
+  }
+
+  presenceSaveDetails.classList.remove('hidden');
+  presenceSaveDetails.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function fetchPresenceSaveDetails(id) {
+  if (!presenceSaveDetails) return;
+  selectedPresenceSaveId = Number(id);
+  presenceSaveDetails.classList.remove('hidden');
+  if (presenceSaveDetailsTitle) presenceSaveDetailsTitle.textContent = 'Chargement de la sauvegarde...';
+  if (presenceSaveDetailsSummary) presenceSaveDetailsSummary.textContent = '';
+  if (presenceSaveDetailsRows) presenceSaveDetailsRows.innerHTML = '';
+  setPresenceSaveDetailsEmpty('Chargement des participants...', 'cloud_sync');
+
+  try {
+    const r = await fetch(`/api/presence-saves/${encodeURIComponent(id)}`);
+    if (r.status === 401) {
+      location.href = '/admin/login';
+      return;
+    }
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${r.status}`);
+    }
+    const save = await r.json();
+    renderPresenceSaveDetails(save);
+  } catch (err) {
+    if (presenceSaveDetailsTitle) presenceSaveDetailsTitle.textContent = 'Sauvegarde indisponible';
+    if (presenceSaveDetailsSummary) presenceSaveDetailsSummary.textContent = '';
+    if (presenceSaveDetailsRows) presenceSaveDetailsRows.innerHTML = '';
+    setPresenceSaveDetailsEmpty('Impossible de charger cette sauvegarde', 'error');
+  }
+}
+
 function renderPresenceSaves(list) {
   if (!presenceSavesRows) return;
   if (!list.length) {
     presenceSavesRows.innerHTML = '';
     setPresenceSavesEmpty('Aucune sauvegarde disponible', 'folder_off');
+    hidePresenceSaveDetails();
     return;
   }
 
@@ -148,9 +256,10 @@ function renderPresenceSaves(list) {
     const safeExcelUrl = escapeHtml(`/api/presence-saves/${encodeURIComponent(save.id)}.xls`);
 
     return `
-      <tr class="hover:bg-orange-50/30 transition-colors border-b border-slate-100 last:border-0">
+      <tr class="presenceSaveRow hover:bg-orange-50/30 transition-colors border-b border-slate-100 last:border-0 cursor-pointer" data-save-id="${escapeHtml(save.id)}">
         <td class="px-6 py-4 font-semibold text-slate-900">
-          ${safeMeetingLabel}
+          <span class="block">${safeMeetingLabel}</span>
+          <span class="text-xs font-medium text-slate-400">Cliquer pour voir la liste</span>
         </td>
         <td class="px-6 py-4">
           <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
@@ -174,6 +283,16 @@ function renderPresenceSaves(list) {
         </td>
       </tr>`;
   }).join('');
+
+  presenceSavesRows.querySelectorAll('tr.presenceSaveRow').forEach((tr) => {
+    tr.addEventListener('click', (event) => {
+      if (event.target.closest('a')) return;
+      const id = Number(tr.getAttribute('data-save-id'));
+      if (Number.isInteger(id) && id > 0) {
+        fetchPresenceSaveDetails(id);
+      }
+    });
+  });
 }
 
 async function fetchPresenceSaves() {
@@ -441,6 +560,7 @@ async function logout() {
 logoutBtn?.addEventListener('click', logout);
 logoutBtnMobile?.addEventListener('click', logout);
 savePresenceBtn?.addEventListener('click', savePresence);
+closePresenceSaveDetails?.addEventListener('click', hidePresenceSaveDetails);
 initAdminMeetingDate();
 fetchInscriptions();
 fetchPresenceSaves();

@@ -94,6 +94,10 @@ function normalizeSpaces(s) {
   return String(s || '').replace(/\s+/g, ' ').trim();
 }
 
+function normalizePersonKey(value) {
+  return normalizeSpaces(value).toLowerCase();
+}
+
 function isYmd(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim());
 }
@@ -202,6 +206,36 @@ async function fetchInscriptionsRows(presenceDate = '') {
   const params = presenceDate ? [presenceDate] : [];
   const { rows } = await pool.query(q, params);
   return rows;
+}
+
+async function findDuplicateInscription({ nom, prenom, date_naissance, presence_date }) {
+  if (!pool) {
+    return mem.inscriptions.find((row) =>
+      normalizePersonKey(row.nom) === normalizePersonKey(nom)
+      && normalizePersonKey(row.prenom) === normalizePersonKey(prenom)
+      && asYmd(row.date_naissance) === date_naissance
+      && asYmd(row.presence_date) === presence_date
+    ) || null;
+  }
+
+  const { rows } = await pool.query(
+    `
+      SELECT id
+      FROM inscriptions
+      WHERE lower(trim(regexp_replace(nom, '[[:space:]]+', ' ', 'g'))) = $1
+        AND lower(trim(regexp_replace(prenom, '[[:space:]]+', ' ', 'g'))) = $2
+        AND date_naissance = $3
+        AND presence_date = $4
+      LIMIT 1;
+    `,
+    [
+      normalizePersonKey(nom),
+      normalizePersonKey(prenom),
+      date_naissance,
+      presence_date
+    ]
+  );
+  return rows[0] || null;
 }
 
 // Lettres (avec accents), espaces, apostrophe et tiret.
@@ -432,6 +466,49 @@ app.get('/api/presence-saves/:id.xls', requireAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/presence-saves/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Sauvegarde invalide' });
+    }
+
+    if (!pool) {
+      const save = mem.presenceSaves.find((s) => Number(s.id) === id);
+      if (!save) return res.status(404).json({ error: 'Sauvegarde introuvable' });
+      return res.json({
+        id: save.id,
+        presence_date: save.presence_date,
+        saved_at: save.saved_at,
+        participant_count: save.participant_count,
+        rows: Array.isArray(save.rows) ? save.rows : []
+      });
+    }
+
+    const { rows } = await pool.query(
+      'SELECT id, presence_date, saved_at, participant_count, rows FROM presence_saves WHERE id = $1',
+      [id]
+    );
+    const save = rows[0];
+    if (!save) return res.status(404).json({ error: 'Sauvegarde introuvable' });
+
+    const snapshotRows = Array.isArray(save.rows) ? save.rows : [];
+    res.json({
+      id: save.id,
+      presence_date: asYmd(save.presence_date),
+      saved_at: save.saved_at,
+      participant_count: save.participant_count,
+      rows: snapshotRows.map((row) => ({
+        ...row,
+        presence_date: asYmd(row.presence_date),
+        date_naissance: asYmd(row.date_naissance)
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur', details: String(err && err.message ? err.message : err) });
+  }
+});
+
 app.post('/api/inscriptions', async (req, res) => {
   try {
     const data = req.body || {};
@@ -509,6 +586,11 @@ app.post('/api/inscriptions', async (req, res) => {
   presence_date: presenceDate,
   created_at: new Date().toISOString()
     };
+
+    const duplicate = await findDuplicateInscription(payload);
+    if (duplicate) {
+      return res.status(409).json({ error: 'Cette personne est déjà inscrite pour cette rencontre.' });
+    }
 
     if (!pool) {
       const row = { id: mem.seq++, ...payload };

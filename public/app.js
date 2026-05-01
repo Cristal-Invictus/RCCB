@@ -424,32 +424,54 @@ function initPhotoUpload() {
     panel?.classList.remove('flex');
   }
 
+  async function getCameraStream() {
+    const constraints = [
+      {
+        video: {
+          facingMode: { ideal: 'user' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      },
+      { video: true, audio: false }
+    ];
+    let lastError = null;
+    for (const constraint of constraints) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraint);
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError || new Error('Caméra indisponible');
+  }
+
   async function openCamera() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      input.click();
-      setFlash('Caméra indisponible sur ce navigateur. Choisissez une photo.', 'error');
+      setFlash('Caméra indisponible sur ce navigateur. Utilisez “Choisir une photo”.', 'error');
       return;
     }
 
     try {
       setFlash('');
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: false
-      });
-      if (video) {
-        video.srcObject = stream;
-        await video.play();
-      }
+      stopCamera();
       panel?.classList.remove('hidden');
       panel?.classList.add('flex');
       controlsInitial?.classList.remove('hidden');
       controlsInitial?.classList.add('flex');
       controlsReview?.classList.add('hidden');
       controlsReview?.classList.remove('flex');
+      stream = await getCameraStream();
+      if (video) {
+        video.srcObject = stream;
+        video.setAttribute('playsinline', '');
+        video.muted = true;
+        await video.play();
+      }
     } catch {
-      input.click();
-      setFlash('Impossible d’ouvrir la caméra. Vous pouvez choisir une photo.', 'error');
+      closeCamera();
+      setFlash('Impossible d’ouvrir la caméra. Autorisez la caméra dans le navigateur ou utilisez “Choisir une photo”.', 'error');
     }
   }
 
