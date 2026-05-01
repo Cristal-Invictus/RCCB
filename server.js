@@ -80,6 +80,16 @@ function escapeCsv(value) {
   return s;
 }
 
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function normalizeSpaces(s) {
   return String(s || '').replace(/\s+/g, ' ').trim();
 }
@@ -97,6 +107,20 @@ function asYmd(value) {
   return d.toISOString().slice(0, 10);
 }
 
+function isAtLeastAge(birthDate, minAge, referenceDate = new Date()) {
+  if (!isYmd(birthDate)) return false;
+  const birth = new Date(`${birthDate}T00:00:00`);
+  if (Number.isNaN(birth.getTime())) return false;
+  const ref = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+  if (birth > ref) return false;
+  let age = ref.getFullYear() - birth.getFullYear();
+  const monthDiff = ref.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && ref.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+  return age >= minAge;
+}
+
 const INSCRIPTION_CSV_HEADERS = [
   'id',
   'presence_date',
@@ -111,6 +135,8 @@ const INSCRIPTION_CSV_HEADERS = [
   'photo',
   'vicariat',
   'paroisse',
+  'raison_presence',
+  'canal_information',
   'commentaires'
 ];
 
@@ -121,10 +147,61 @@ function buildInscriptionsCsv(rows) {
   ].join('\n');
 }
 
+function buildInscriptionsExcel(rows) {
+  const headerCells = INSCRIPTION_CSV_HEADERS
+    .map((h) => `<th>${escapeHtml(h)}</th>`)
+    .join('');
+  const bodyRows = rows.map((row) => {
+    const cells = INSCRIPTION_CSV_HEADERS
+      .map((h) => `<td>${escapeHtml(row[h])}</td>`)
+      .join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    table { border-collapse: collapse; }
+    th, td { border: 1px solid #d1d5db; padding: 6px 8px; mso-number-format:"\\@"; }
+    th { background: #f3f4f6; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <table>
+    <thead><tr>${headerCells}</tr></thead>
+    <tbody>${bodyRows}</tbody>
+  </table>
+</body>
+</html>`;
+}
+
 function sendCsv(res, filename, csv) {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send('\uFEFF' + csv);
+}
+
+function sendExcel(res, filename, html) {
+  res.setHeader('Content-Type', 'application/vnd.ms-excel; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send('\uFEFF' + html);
+}
+
+async function fetchInscriptionsRows(presenceDate = '') {
+  if (!pool) {
+    return presenceDate
+      ? mem.inscriptions.filter((r) => asYmd(r.presence_date) === presenceDate).slice().reverse()
+      : mem.inscriptions.slice().reverse();
+  }
+
+  const q = presenceDate
+    ? 'SELECT * FROM inscriptions WHERE presence_date = $1 ORDER BY id DESC'
+    : 'SELECT * FROM inscriptions ORDER BY id DESC';
+  const params = presenceDate ? [presenceDate] : [];
+  const { rows } = await pool.query(q, params);
+  return rows;
 }
 
 // Lettres (avec accents), espaces, apostrophe et tiret.
@@ -198,24 +275,19 @@ app.get('/api/inscriptions', requireAdmin, async (_req, res) => {
 // Export CSV (admin)
 app.get('/api/inscriptions.csv', requireAdmin, async (_req, res) => {
   try {
-    if (!pool) {
-      const presenceDate = (_req.query && String(_req.query.date || '').trim()) || '';
-      const rows = presenceDate
-        ? mem.inscriptions.filter((r) => r.presence_date === presenceDate).slice().reverse()
-        : mem.inscriptions.slice().reverse();
-
-      return sendCsv(res, 'inscriptions.csv', buildInscriptionsCsv(rows));
-    }
-
     const presenceDate = (_req.query && String(_req.query.date || '').trim()) || '';
-    const q = presenceDate
-      ? 'SELECT * FROM inscriptions WHERE presence_date = $1 ORDER BY id DESC'
-      : 'SELECT * FROM inscriptions ORDER BY id DESC';
-    const params = presenceDate ? [presenceDate] : [];
-
-    const result = await pool.query(q, params);
-    const rows = result.rows;
+    const rows = await fetchInscriptionsRows(presenceDate);
     sendCsv(res, 'inscriptions.csv', buildInscriptionsCsv(rows));
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur', details: String(err && err.message ? err.message : err) });
+  }
+});
+
+app.get('/api/inscriptions.xls', requireAdmin, async (_req, res) => {
+  try {
+    const presenceDate = (_req.query && String(_req.query.date || '').trim()) || '';
+    const rows = await fetchInscriptionsRows(presenceDate);
+    sendExcel(res, 'inscriptions.xls', buildInscriptionsExcel(rows));
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur', details: String(err && err.message ? err.message : err) });
   }
@@ -325,10 +397,45 @@ app.get('/api/presence-saves/:id.csv', requireAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/presence-saves/:id.xls', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Sauvegarde invalide' });
+    }
+
+    if (!pool) {
+      const save = mem.presenceSaves.find((s) => Number(s.id) === id);
+      if (!save) return res.status(404).json({ error: 'Sauvegarde introuvable' });
+      return sendExcel(
+        res,
+        `presences-${save.presence_date}-sauvegarde-${save.id}.xls`,
+        buildInscriptionsExcel(save.rows)
+      );
+    }
+
+    const { rows } = await pool.query(
+      'SELECT id, presence_date, rows FROM presence_saves WHERE id = $1',
+      [id]
+    );
+    const save = rows[0];
+    if (!save) return res.status(404).json({ error: 'Sauvegarde introuvable' });
+
+    const snapshotRows = Array.isArray(save.rows) ? save.rows : [];
+    sendExcel(
+      res,
+      `presences-${asYmd(save.presence_date)}-sauvegarde-${save.id}.xls`,
+      buildInscriptionsExcel(snapshotRows)
+    );
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur', details: String(err && err.message ? err.message : err) });
+  }
+});
+
 app.post('/api/inscriptions', async (req, res) => {
   try {
     const data = req.body || {};
-  const required = ['nom', 'prenom', 'date_naissance', 'sexe', 'situation_relationnelle', 'photo', 'vicariat', 'paroisse', 'presence_date'];
+  const required = ['nom', 'prenom', 'date_naissance', 'sexe', 'situation_relationnelle', 'photo', 'vicariat', 'paroisse', 'presence_date', 'raison_presence', 'canal_information'];
     const missing = required.filter((k) => !data[k]);
 
     if (missing.length) {
@@ -338,6 +445,9 @@ app.post('/api/inscriptions', async (req, res) => {
   const dn = String(data.date_naissance || '').trim();
     if (!isYmd(dn)) {
       return res.status(400).json({ error: 'Date de naissance invalide (format attendu: YYYY-MM-DD)' });
+    }
+    if (!isAtLeastAge(dn, 13)) {
+      return res.status(400).json({ error: 'Date de naissance invalide: le participant doit avoir au moins 13 ans.' });
     }
 
     const presenceDate = String(data.presence_date || '').trim();
@@ -357,6 +467,15 @@ app.post('/api/inscriptions', async (req, res) => {
     const telephone = data.telephone ? String(data.telephone).replace(/\s+/g, '') : '';
     if (telephone && !BJ_PHONE_RE.test(telephone)) {
       return res.status(400).json({ error: 'Téléphone invalide (format attendu: 01XXXXXXXX).' });
+    }
+
+    const raisonPresence = normalizeSpaces(data.raison_presence);
+    const canalInformation = normalizeSpaces(data.canal_information);
+    if (!raisonPresence) {
+      return res.status(400).json({ error: 'Veuillez répondre à la question: pourquoi as-tu choisi de venir à cette rencontre ?' });
+    }
+    if (!canalInformation) {
+      return res.status(400).json({ error: 'Veuillez indiquer par quel canal tu as été informé de cette rencontre.' });
     }
 
     let photo = data.photo || '';
@@ -384,6 +503,8 @@ app.post('/api/inscriptions', async (req, res) => {
       photo,
       vicariat: String(data.vicariat),
       paroisse: String(data.paroisse),
+      raison_presence: raisonPresence,
+      canal_information: canalInformation,
       commentaires: data.commentaires || '',
   presence_date: presenceDate,
   created_at: new Date().toISOString()
@@ -397,9 +518,9 @@ app.post('/api/inscriptions', async (req, res) => {
 
     const q = `
       INSERT INTO inscriptions
-  (nom, prenom, date_naissance, sexe, situation_relationnelle, profession, telephone, photo, vicariat, paroisse, commentaires, presence_date, created_at)
+  (nom, prenom, date_naissance, sexe, situation_relationnelle, profession, telephone, photo, vicariat, paroisse, raison_presence, canal_information, commentaires, presence_date, created_at)
       VALUES
-  ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+  ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
       RETURNING id;
     `;
 
@@ -414,6 +535,8 @@ app.post('/api/inscriptions', async (req, res) => {
       payload.photo,
       payload.vicariat,
       payload.paroisse,
+      payload.raison_presence,
+      payload.canal_information,
       payload.commentaires,
   payload.presence_date,
   payload.created_at
@@ -445,11 +568,15 @@ async function start() {
         photo TEXT,
         vicariat TEXT NOT NULL,
         paroisse TEXT NOT NULL,
+        raison_presence TEXT,
+        canal_information TEXT,
         commentaires TEXT,
         presence_date DATE NOT NULL,
         created_at TIMESTAMPTZ NOT NULL
       );
     `);
+    await pool.query('ALTER TABLE inscriptions ADD COLUMN IF NOT EXISTS raison_presence TEXT;');
+    await pool.query('ALTER TABLE inscriptions ADD COLUMN IF NOT EXISTS canal_information TEXT;');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS presence_saves (
         id BIGSERIAL PRIMARY KEY,

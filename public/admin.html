@@ -154,6 +154,20 @@
       </p>
     </header>
 
+    <section class="glass-card p-6 rounded-2xl shadow-sm border border-orange-100/50 mb-8 bg-white">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-600">
+          <span class="material-symbols-outlined">calendar_today</span>
+        </div>
+        <div>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Session actuelle</p>
+          <h2 class="text-xl font-bold text-slate-900">
+            Présence à la Rencontre Mensuelle du <span id="adminMeetingDateLabel" class="text-orange-600">--/--/----</span>
+          </h2>
+        </div>
+      </div>
+    </section>
+
     <section id="stats" class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-xl"></section>
 
     <section id="participants" class="bg-white rounded-xl shadow-[0_20px_20px_rgba(143,0,13,0.04)] overflow-hidden border border-surface-container-highest">
@@ -178,6 +192,11 @@
           <a id="downloadCsv" href="/api/inscriptions.csv" download class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
             <span class="material-symbols-outlined text-lg">download</span>
             Exporter CSV
+          </a>
+
+          <a id="downloadExcel" href="/api/inscriptions.xls" download class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-700 bg-white border border-emerald-100 rounded-lg hover:bg-emerald-50 transition-colors shadow-sm">
+            <span class="material-symbols-outlined text-lg text-emerald-600">table_view</span>
+            Exporter Excel
           </a>
 
           <button id="savePresenceBtn" class="fire-gradient flex items-center gap-2 px-6 py-2 text-sm font-bold text-white rounded-lg shadow-lg shadow-orange-100 hover:opacity-90 active:scale-95 transition-all" type="button">

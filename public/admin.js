@@ -8,11 +8,13 @@ const logoutBtnMobile = document.getElementById('logoutBtnMobile');
 const details = document.getElementById('details');
 const presenceDateInput = document.getElementById('presenceDate');
 const downloadCsv = document.getElementById('downloadCsv');
+const downloadExcel = document.getElementById('downloadExcel');
 const tableSummary = document.getElementById('tableSummary');
 const savePresenceBtn = document.getElementById('savePresenceBtn');
 const savePresenceStatus = document.getElementById('savePresenceStatus');
 const presenceSavesRows = document.getElementById('presenceSavesRows');
 const presenceSavesEmpty = document.getElementById('presenceSavesEmpty');
+const adminMeetingDateLabel = document.getElementById('adminMeetingDateLabel');
 
 let inscriptions = [];
 let presenceSaves = [];
@@ -55,6 +57,46 @@ function formatDateTimeFr(value) {
     hour: '2-digit',
     minute: '2-digit'
   });
+}
+
+function firstSundayOfMonth(date = new Date()) {
+  const d = new Date(date.getFullYear(), date.getMonth(), 1);
+  const offset = (7 - d.getDay()) % 7;
+  d.setDate(1 + offset);
+  return d;
+}
+
+function toYmd(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatMeetingDateFr(value) {
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return formatYmdFr(value);
+  const formatted = d.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+  return formatted.replace(/\b([a-zà-ÿ])/g, (letter) => letter.toUpperCase());
+}
+
+function syncAdminMeetingDate() {
+  const value = presenceDateInput?.value || '';
+  if (adminMeetingDateLabel) {
+    adminMeetingDateLabel.textContent = value ? formatMeetingDateFr(value) : '--/--/----';
+  }
+}
+
+function initAdminMeetingDate() {
+  if (!presenceDateInput) return;
+  if (!presenceDateInput.value) {
+    presenceDateInput.value = toYmd(firstSundayOfMonth());
+  }
+  syncAdminMeetingDate();
 }
 
 function setSavePresenceStatus(message, tone = 'info') {
@@ -103,6 +145,7 @@ function renderPresenceSaves(list) {
     const safeCountLabel = escapeHtml(`${count} participant${count > 1 ? 's' : ''}`);
     const safeSavedAt = escapeHtml(formatDateTimeFr(save.saved_at));
     const safeDownloadUrl = escapeHtml(`/api/presence-saves/${encodeURIComponent(save.id)}.csv`);
+    const safeExcelUrl = escapeHtml(`/api/presence-saves/${encodeURIComponent(save.id)}.xls`);
 
     return `
       <tr class="hover:bg-orange-50/30 transition-colors border-b border-slate-100 last:border-0">
@@ -118,10 +161,16 @@ function renderPresenceSaves(list) {
           ${safeSavedAt}
         </td>
         <td class="px-6 py-4 text-right">
+          <div class="flex flex-col sm:flex-row justify-end gap-3">
           <a href="${safeDownloadUrl}" class="inline-flex items-center gap-1.5 text-sm font-bold text-orange-600 hover:text-red-700 transition-colors" download>
             <span class="material-symbols-outlined text-lg">cloud_download</span>
-            Télécharger
+            CSV
           </a>
+          <a href="${safeExcelUrl}" class="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors" download>
+            <span class="material-symbols-outlined text-lg">table_view</span>
+            Excel
+          </a>
+          </div>
         </td>
       </tr>`;
   }).join('');
@@ -182,7 +231,10 @@ function showDetails(x) {
         <div><span class="k">Téléphone</span><span class="v">${escapeHtml(x.telephone || '')}</span></div>
       </div>
       <div class="admin-detail-card bg-white rounded-xl p-4 md:col-span-3">
-        <div><span class="k">Commentaires</span><span class="v">${escapeHtml(x.commentaires || '')}</span></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><span class="k">Pourquoi cette rencontre ?</span><span class="v">${escapeHtml(x.raison_presence || '')}</span></div>
+          <div><span class="k">Canal d'information</span><span class="v">${escapeHtml(x.canal_information || '')}</span></div>
+        </div>
       </div>
     </div>
   `;
@@ -277,7 +329,7 @@ function render(list) {
 function applySearch() {
   const q = ((searchInput && searchInput.value) || (searchMobileInput && searchMobileInput.value) || '').trim().toLowerCase();
   const filtered = inscriptions.filter((x) =>
-  [x.presence_date, x.nom, x.prenom, x.vicariat, x.paroisse, x.profession, x.telephone, x.situation_relationnelle]
+  [x.presence_date, x.nom, x.prenom, x.vicariat, x.paroisse, x.profession, x.telephone, x.situation_relationnelle, x.raison_presence, x.canal_information]
       .join(' ')
       .toLowerCase()
       .includes(q)
@@ -304,6 +356,9 @@ async function fetchInscriptions() {
     // Met à jour le lien CSV pour inclure le filtre date
     if (downloadCsv) {
       downloadCsv.href = d ? `/api/inscriptions.csv?date=${encodeURIComponent(d)}` : '/api/inscriptions.csv';
+    }
+    if (downloadExcel) {
+      downloadExcel.href = d ? `/api/inscriptions.xls?date=${encodeURIComponent(d)}` : '/api/inscriptions.xls';
     }
   } catch (err) {
     if (stats) {
@@ -371,6 +426,7 @@ searchMobileInput?.addEventListener('input', () => {
 
 presenceDateInput?.addEventListener('change', () => {
   showDetails(null);
+  syncAdminMeetingDate();
   fetchInscriptions();
 });
 
@@ -385,6 +441,6 @@ async function logout() {
 logoutBtn?.addEventListener('click', logout);
 logoutBtnMobile?.addEventListener('click', logout);
 savePresenceBtn?.addEventListener('click', savePresence);
-
+initAdminMeetingDate();
 fetchInscriptions();
 fetchPresenceSaves();

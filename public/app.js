@@ -210,6 +210,24 @@ function firstSundayOfMonth(date = new Date()) {
   return d;
 }
 
+function minBirthDateForAge(age, referenceDate = new Date()) {
+  return new Date(referenceDate.getFullYear() - age, referenceDate.getMonth(), referenceDate.getDate());
+}
+
+function isAtLeastAge(birthDate, minAge, referenceDate = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(birthDate || ''))) return false;
+  const birth = new Date(`${birthDate}T00:00:00`);
+  if (Number.isNaN(birth.getTime())) return false;
+  const ref = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+  if (birth > ref) return false;
+  let age = ref.getFullYear() - birth.getFullYear();
+  const monthDiff = ref.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && ref.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+  return age >= minAge;
+}
+
 function toYmd(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -289,6 +307,35 @@ function initMeetingDate() {
 
   syncLabel();
   presenceDateInput.addEventListener('change', syncLabel);
+}
+
+function initBirthDateRules() {
+  const birthDateInput = $('#birth-date');
+  if (!birthDateInput) return;
+  birthDateInput.max = toYmd(minBirthDateForAge(13));
+}
+
+function initCanalInformation() {
+  const canalSelect = $('#canal_information');
+  const autreWrapper = $('#wrapper-canal-autre');
+  const autreInput = $('#canal-information-autre');
+  if (!canalSelect || !autreWrapper || !autreInput) return;
+
+  function syncAutre() {
+    if (canalSelect.value === 'Autre') {
+      autreWrapper.classList.remove('hidden');
+      autreWrapper.classList.add('flex');
+      autreInput.required = true;
+    } else {
+      autreWrapper.classList.add('hidden');
+      autreWrapper.classList.remove('flex');
+      autreInput.required = false;
+      autreInput.value = '';
+    }
+  }
+
+  canalSelect.addEventListener('change', syncAutre);
+  syncAutre();
 }
 
 function resetMeetingDate() {
@@ -439,7 +486,10 @@ async function buildPayloadFromForm(form) {
   const telephoneRaw = String(fd.get('telephone') || '').replace(/\s+/g, '').trim();
   const vicariat = String(fd.get('vicariat') || '').trim();
   const paroisse = normalizeSpaces(fd.get('paroisse'));
-  const commentaires = normalizeSpaces(fd.get('commentaires'));
+  const raison_presence = normalizeSpaces(fd.get('raison_presence'));
+  const canalBase = String(fd.get('canal_information') || '').trim();
+  const canalAutre = normalizeSpaces(fd.get('canal_information_autre'));
+  const canal_information = canalBase === 'Autre' ? canalAutre : canalBase;
 
   if (!nom || !NAME_RE.test(nom)) {
     throw new Error("Nom invalide (lettres uniquement, espaces, '-' et apostrophe autorisés).");
@@ -450,6 +500,9 @@ async function buildPayloadFromForm(form) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date_naissance)) {
     throw new Error('Date de naissance invalide (format attendu: YYYY-MM-DD).');
   }
+  if (!isAtLeastAge(date_naissance, 13)) {
+    throw new Error('Date de naissance invalide: le participant doit avoir au moins 13 ans.');
+  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(presence_date)) {
     throw new Error('Date de présence invalide (format attendu: YYYY-MM-DD).');
   }
@@ -457,6 +510,8 @@ async function buildPayloadFromForm(form) {
   if (!situation_relationnelle) throw new Error('Veuillez sélectionner la situation relationnelle.');
   if (!vicariat) throw new Error('Veuillez sélectionner le vicariat.');
   if (!paroisse) throw new Error('Veuillez renseigner la paroisse.');
+  if (!raison_presence) throw new Error('Veuillez répondre à la question: pourquoi as-tu choisi de venir à cette rencontre ?');
+  if (!canal_information) throw new Error('Veuillez indiquer par quel canal tu as été informé de cette rencontre.');
 
   let telephone = telephoneRaw;
   if (telephone) {
@@ -496,7 +551,9 @@ async function buildPayloadFromForm(form) {
     photo,
     vicariat,
     paroisse,
-    commentaires,
+    raison_presence,
+    canal_information,
+    commentaires: '',
     presence_date
   };
 }
@@ -536,6 +593,8 @@ function initThemeToggle() {
 document.addEventListener('DOMContentLoaded', () => {
   initVicariats();
   initMeetingDate();
+  initBirthDateRules();
+  initCanalInformation();
   initPhotoUpload();
   initThemeToggle();
 
