@@ -172,7 +172,7 @@ function renderPresenceSaveDetails(save) {
     downloadSaveCSV.href = `/api/presence-saves/${saveId}.csv`;
   }
   if (downloadSaveExcel) {
-    downloadSaveExcel.href = `/api/presence-saves/${saveId}.xls`;
+    downloadSaveExcel.href = `/api/presence-saves/${saveId}.xlsx`;
   }
 
   if (!participants.length) {
@@ -253,7 +253,7 @@ function renderPresenceSaves(list) {
     const safeCountLabel = escapeHtml(`${count} participant${count > 1 ? 's' : ''}`);
     const safeSavedAt = escapeHtml(formatDateTimeFr(save.saved_at));
     const safeDownloadUrl = escapeHtml(`/api/presence-saves/${encodeURIComponent(save.id)}.csv`);
-    const safeExcelUrl = escapeHtml(`/api/presence-saves/${encodeURIComponent(save.id)}.xls`);
+    const safeExcelUrl = escapeHtml(`/api/presence-saves/${encodeURIComponent(save.id)}.xlsx`);
 
     return `
       <tr class="presenceSaveRow hover:bg-orange-50/30 transition-colors border-b border-slate-100 last:border-0 cursor-pointer" data-save-id="${escapeHtml(save.id)}">
@@ -477,7 +477,7 @@ async function fetchInscriptions() {
       downloadCsv.href = d ? `/api/inscriptions.csv?date=${encodeURIComponent(d)}` : '/api/inscriptions.csv';
     }
     if (downloadExcel) {
-      downloadExcel.href = d ? `/api/inscriptions.xls?date=${encodeURIComponent(d)}` : '/api/inscriptions.xls';
+      downloadExcel.href = d ? `/api/inscriptions.xlsx?date=${encodeURIComponent(d)}` : '/api/inscriptions.xlsx';
     }
   } catch (err) {
     if (stats) {

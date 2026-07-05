@@ -1,30 +1,50 @@
-# Publication GitHub + visualisation du produit final
+# Publication GitHub + Vercel
 
-Je ne peux pas publier automatiquement sur ton compte GitHub sans ton token/accès.
+## 1. Publier ce projet sur GitHub
 
-## 1) Publier ce projet sur ton GitHub
 ```bash
 git remote -v
-# si pas de remote:
-git remote add origin https://github.com/<TON-USERNAME>/<TON-REPO>.git
+```
 
+Si aucun remote n'est configuré:
+
+```bash
+git remote add origin https://github.com/<TON-USERNAME>/<TON-REPO>.git
 git push -u origin HEAD
 ```
 
-## 2) Voir le produit final
-### Local
+Si le remote existe déjà:
+
+```bash
+git push
+```
+
+## 2. Déployer sur Vercel
+
+1. Ouvrir Vercel.
+2. Importer le dépôt GitHub.
+3. Choisir le preset `Other`.
+4. Ajouter les variables:
+   - `DATABASE_URL`
+   - `ADMIN_TOKEN`
+   - `PGSSL=require` si nécessaire.
+5. Déployer.
+
+Voir `VERCEL_DEPLOY.md` pour le détail.
+
+## 3. Voir le produit final en local
+
 ```bash
 npm install
 npm start
 ```
-Puis ouvre `http://localhost:3000`.
 
-### En ligne (partageable)
-- Connecte le repo sur Render ou Railway
-- Build command: `npm install`
-- Start command: `npm start`
-- Tu obtiens une URL publique à partager.
+Puis ouvrir `http://localhost:3000`.
 
-## 3) Import des vicariats/paroisses
-Le script SQL fourni est PostgreSQL (tables `dioceses`, `vicariats`, `paroisses`).
-Pour l'utiliser tel quel, il faut migrer la base vers PostgreSQL (au lieu de SQLite), puis exécuter ton script seed.
+## 4. Vérifier en ligne
+
+- Site public: `https://ton-domaine.vercel.app/`
+- Admin: `https://ton-domaine.vercel.app/admin/login`
+- Santé API: `https://ton-domaine.vercel.app/api/health`
+
+`/api/health` doit indiquer `storage: "postgres+backup"` et `backupDurable: true` en production durable.
